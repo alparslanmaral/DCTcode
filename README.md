@@ -1,88 +1,211 @@
 # DCT Code
 
-Hafif, tarayıcı tabanlı mini editör (VSCode benzeri). LocalStorage kalıcılık, kayıt slotları, GitHub public repo klon, Light/Dark tema ve GitHub PAT ile push desteği içerir.
+Tarayıcı içinde çalışan, hafif, kurulum gerektirmeyen bir mini kod editörü.  
+Amaç: Bilgisayarınıza ekstra program (VSCode / GitHub Desktop) kurmadan; hatta **mobil cihazlardan bile** (telefon / tablet) hızlıca kod düzenleyip GitHub repository’lerinize push edebilmenizi sağlamak.
 
-## Özellikler
+> Sadece siteye gidin, Personal Access Token (PAT) oluşturun, kodunuzu yazın ve push edin. Hepsi tarayıcıda.
 
-- Yeni proje oluşturma (README.md başlangıcı)
-- Dosya / klasör (sentinel) yönetimi
-- Sekmeli çoklu dosya
-- Dirty takibi, toplu kaydet (Ctrl+S)
-- 5 Save Slot (snapshot)
-- GitHub public repo klon (main/master tespiti)
+---
+
+## İçindekiler
+1. Özellikler
+2. Hızlı Başlangıç (1 dakikada)
+3. Kullanım Adımları (Detay)
+4. GitHub Personal Access Token (PAT) Oluşturma
+5. GitHub’a Push Akışı
+6. Klavye Kısayolları
+7. Güvenlik Uyarıları
+8. Sık Sorulan Sorular (SSS)
+9. Sorun Giderme
+10. Lisans
+
+---
+
+## 1. Özellikler
+
+- Tamamen client‑side (tüm veriler LocalStorage’da)
+- Yeni proje oluşturma / proje adı düzenleme
+- Dosya & “klasör” oluşturma (klasörler sentinel dosyasıyla temsil edilir)
+- Sekmeli çoklu dosya düzenleme
+- Değişiklik (dirty) takibi ve tek tuşla kaydetme
+- 5 adet “Save Slot” (proje snapshot kaydet / yükle)
 - Light / Dark tema (kalıcı)
-- GitHub’a Personal Access Token ile tek commit push
-- Branch kontrol / oluşturma
-- Opsiyonel alt klasör (prefix) ile push
+- Public GitHub repo içeriğini URL ile klonlama (main/master otomatik tespit)
+- GitHub’a **Personal Access Token (PAT)** kullanarak tek commit ile tüm proje push
+- Branch var mı kontrol etme ve yoksa oluşturma
+- Opsiyonel alt dizin (prefix) ile push (örn. tüm içeriği `src/` altına koymak)
+- Mobil uyumlu (dokunma ile sekme/dosya gezilebilir)
 
-## PAT (Personal Access Token) ile GitHub Push
+Hiçbir backend veya sunucu bileşeni gerektirmez. (Klonlama public raw içerik, push işlemleri GitHub API üzerinden token ile yapılır.)
 
-### Neden PAT?
-Backend olmadan (sadece client-side) güvenli OAuth akışı yapılamadığı için push işlemleri kullanıcıdan alınan PAT ile yapılır.
+---
 
-### Token Nasıl Alınır?
-1. GitHub: Settings → Developer Settings → Personal Access Tokens (classic veya fine-grained).
-2. Scope:
-   - Sadece public repo: `public_repo`
-   - Private repo da dahil: `repo`
-3. Süre (expiration) belirleyin.
-4. Token’ı kopyalayın (ghp_ veya fine-grained format).
-5. Uygulamadaki “GitHub PAT” kutusuna yapıştır → “Token Kaydet” → “Doğrula”.
+## 2. Hızlı Başlangıç (1 Dakika)
 
-### Push Akışı
-1. Token doğrulanır (USER bilgisi gelir).
-2. “Repo Getir” → repo listesi seçilir.
-3. Branch adı (örn. main) yazılır.
-   - Yoksa “Branch Kontrol” → yoksa “Branch Oluştur”.
-4. Commit mesajı yazılır.
-5. (Opsiyonel) Alt klasör girilebilir (ör. `src` → tüm dosyalar repo içinde `src/` altına atılır).
-6. “Push Proje” → Tek commit içinde tüm dosyalar gönderilir.
+1. Siteye git:  https://alparslanmaral.github.io/DCTcode/
+2. “GitHub” paneline geç → PAT alanına tıklama
+3. GitHub’da PAT oluştur (aşağıdaki bölümde anlatılıyor) ve token’ı yapıştır → “Token Kaydet” → “Doğrula”
+4. “Repo Getir” → push yapmak istediğin repo’yu seç
+5. Branch adı (örn. `main`) gir → “Branch Kontrol”; yoksa “Branch Oluştur”
+6. Dosyaları düzenle veya yeni oluştur
+7. “Commit mesajı” yaz → “Push Proje” → GitHub’a git ve sonucu gör
 
-### Teknik Push Adımları
-1. `GET /repos/:repo/git/ref/heads/:branch` → base commit
-2. Base commit içinden base tree alınır
-3. Yerel her dosya için `POST /git/blobs`
-4. `POST /git/trees` (base_tree + yeni blob’lar)
-5. `POST /git/commits` (parents = [base commit])
-6. `PATCH /git/refs/heads/:branch` → ref güncelle
+---
 
-### Güvenlik Uyarısı
-- Token localStorage’da saklanır (anahtar: `dctcode_pat`).
-- XSS olursa token çalınabilir.
-- İşiniz bitince “Sil / Çıkış” ile token’ı kaldırın.
+## 3. Kullanım Adımları (Detay)
 
-## Kısayollar
+### 3.1 Arayüz Bölgeleri
+- Sol Activity Bar: Explorer, Save Slots, GitHub (Clone & Push), Tema, Hakkında
+- Explorer Paneli: Proje adı, dosya ağacı, yeni dosya/klasör butonları
+- GitHub Paneli:
+  - PAT yönetimi (kaydet/doğrula/sil)
+  - Repo klonlama (public URL)
+  - Push bölümü (repo seçimi, branch, prefix, commit mesajı)
+  - Log alanı (İlerleme + hata mesajları)
+- Alt Status Bar: Proje adı, aktif dosya, kaydetme durumu
+
+### 3.2 Yeni Proje
+- Explorer üst kısmındaki “+P” (Yeni Proje) butonu veya kısayol: `Ctrl+Shift+N`
+- Otomatik bir `README.md` oluşturulur ve açılır.
+
+### 3.3 Dosya / Klasör
+- +F → Dosya
+- +D → Klasör (arka planda `.dct_folder` sentinel dosyası eklenir)
+- Dosya sekmeleri tıklanarak veya ağaçtan seçilerek değiştirilir.
+- Sağ tıklama (context menu): Yeni dosya, yeni klasör, yeniden adlandır (dosya), sil
+
+### 3.4 Kaydetme
+- Düzenleme yapınca sekmede “*” belirir, ağaçta dosya ismi yıldızlı görünür.
+- `Ctrl+S` → tüm açık değişiklikleri LocalStorage’a yazar ve “Saved” durumuna geçirir.
+
+### 3.5 Save Slots
+- 5 slot (snapshot) vardır.
+- Mevcut proje durumunu slot’a kaydedebilir, sonra geri yükleyebilirsin.
+- Komple proje JSON kopyası şeklinde saklanır.
+
+### 3.6 Tema
+- Activity Bar’daki 🌙 / ☀️ simgesine tıklayarak Light ↔ Dark
+- Kısayol: `Ctrl+Alt+T`
+- Tercih LocalStorage’a kaydedilir.
+
+### 3.7 Public Repo Klonlama
+- GitHub panelindeki “Repo URL” alanına şu formatlardan biri:
+  - `https://github.com/kullanici/repo`
+  - `https://github.com/kullanici/repo/tree/branch`
+- “Clone” butonuna bas → Dosyalar indirildikten sonra proje içeriği değişir.
+- Bu işlem mevcut (kaydedilmemiş) çalışmanı ezebilir; uyarı verebilir.
+
+### 3.8 Push (PAT ile)
+- PAT doğrulanmış olmalı.
+- “Repo Getir” ile listede gözüken repo seçilir.
+- Branch girilir:
+  - Mevcutsa “Branch Kontrol” başarılı döner.
+  - Yoksa “Branch Oluştur” ile (main/master taban alınarak) oluşturulabilir.
+- İsteğe bağlı “Alt Klasör (prefix)” girersen tüm dosyalar push sırasında o klasör altına yerleştirilir.
+- Commit mesajı yaz → “Push Proje”
+- İşlem adımları (blob → tree → commit → ref update) log’da izlenebilir.
+
+### 3.9 Mobil Kullanım
+- Dokunarak dosya/sekme seçimi, butonlar da kullanılabilir.
+
+---
+
+## 4. GitHub Personal Access Token (PAT) Oluşturma
+
+### 4.1 Fine-Grained (Önerilen)
+1. GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens
+2. “Generate new token”
+3. Name: Örn. `DCT Code`
+4. Expiration: Kısa bir süre (örn. 30 gün) seç
+5. Resource owner: (Kendi hesabın veya push yapmak istediğin organizasyon)
+6. Repository access: “Only select repositories” → push edeceğin repo(ları) seç
+7. Permissions → Repository permissions → “Contents: Read and write”
+8. Generate → Token’ı kopyala (tek sefer gösterilir)
+
+### 4.2 Uygulamaya Girme
+- GitHub panelinde PAT alanına yapıştır → “Token Kaydet” → “Doğrula”
+- Başarılı doğrulama sonrası kullanıcı adı & avatar görünür.
+
+### 4.3 Minimum Gerekli İzin
+- Sadece repo içeriği pushlamak için “Contents: Read and write” (fine-grained) yeterlidir.
+
+---
+
+## 5. GitHub’a Push Akışı (Özet)
+
+1. Ref (branch) SHA alınır (`/git/ref/heads/{branch}`)
+2. Base commit incelenir → tree SHA elde edilir
+3. Her yerel dosya için blob oluşturulur (`/git/blobs`)
+4. Yeni tree (`/git/trees`) base tree + yeni blob’lar ile hazırlanır
+5. Yeni commit (`/git/commits`) oluşturulur (parent = base commit)
+6. Branch ref (`/git/refs/heads/{branch}`) yeni commit SHA ile güncellenir
+
+Push tamamlandığında GitHub repo’da commit’i görebilirsin.
+
+---
+
+## 6. Klavye Kısayolları
 
 | Kısayol | İşlev |
-|--------|-------|
-| Ctrl+S | Kaydet |
+|---------|-------|
+| Ctrl+S | Tüm değişiklikleri kaydet |
 | Ctrl+Shift+N | Yeni proje |
 | Ctrl+Alt+T | Tema değiştir |
-| (Sekme ×) | Dosya sekmesini kapat |
+| (Sekme üzerindeki ×) | Sekmeyi kapat |
 
-## Veri Yapısı
+MacOS’ta `Cmd` tuşu aynı işleve sahiptir.
 
-```json
-{
-  "name": "ProjeAdı",
-  "files": { "README.md": "# ..." },
-  "openFiles": ["README.md"],
-  "activeFile": "README.md",
-  "created": "ISO",
-  "updated": "ISO"
-}
+---
+
+## 7. Güvenlik Uyarıları
+
+- PAT tarayıcı LocalStorage’da tutulur (anahtar: `dctcode_pat`)
+- XSS (cross-site scripting) açığı oluşursa token sızabilir
+- Güvenmediğin cihazlarda token bırakma → iş bitince “Sil / Çıkış”
+- Şüphe durumunda GitHub Settings → ilgili token → “Revoke” yap
+
+---
+
+## 8. Sık Sorulan Sorular (SSS)
+
+**S: Branch yok uyarısı alıyorum.**  
+Y: “Branch Oluştur” butonunu kullan; base olarak main/master tespit ediliyor.
+
+**S: Token süresi doldu ne yapacağım?**  
+Y: Yeni PAT oluştur → uygulamada eskisini sil → yenisini gir.
+
+---
+
+## 9. Sorun Giderme
+
+| Belirti | Muhtemel Neden | Çözüm |
+|---------|----------------|-------|
+| 401 Unauthorized | Token yanlış / Expired / Revoke | Token’ı yeniden gir veya yenile |
+| 403 Ref update hatası | Branch korumalı | Repo ayarlarını kontrol et |
+| 404 Repo yok | Fine-grained seçerken repo eklenmedi | Yeni token oluştur, doğru repo seç |
+| Branch oluşturmuyor | Base branch bulunamadı | Repo default branch adını manuel gir (örn. `develop`) |
+| Push çok yavaş | Çok dosya / büyük içerik | Dosya sayısını azalt veya parça parça push |
+| Değişiklik kayboldu | Yeni clone yaptın | Clone öncesi kaydedilmemiş değişikleri kaydet |
+
+Rate limit durumunu görmek için (token ile):
+```
+GET https://api.github.com/rate_limit
+Authorization: token <PAT>
 ```
 
-Klasörler için `.dct_folder` sentinel dosyası kullanılır.
+---
 
-## Roadmap Fikirleri
+## 10. Geliştirici
 
-- Zip export / import
-- Monaco Editor
-- Dosya arama & filtre
-- Çoklu repo push seçeneği
-- Klasör rename
-- Diff / değişiklik önizleme
-
-## Geliştiricii
 Ahmet Alparslan Maral
+
+X: @dctstudios2024
+
+---
+
+## Özet
+
+DCT Code; tarayıcıdan (masaüstü veya mobil) hızlıca kod düzenleyip GitHub’a push yapabilmek için tasarlanmış basit, bağımsız bir editördür.  
+Başlamak için: siteyi aç → PAT oluştur → doğrula → repo & branch seç → düzenle → push.
+
+Sorularınız veya geliştirme talepleriniz için issue açabilirsiniz. İyi çalışmalar!
