@@ -14,6 +14,20 @@
   --tab-height: 32px;
 }
 
+/* LIGHT THEME OVERRIDES */
+:root[data-theme="light"] {
+  --bg: #f5f6f8;
+  --bg-alt: #ffffff;
+  --bg-alt2: #f0f1f3;
+  --border: #d0d4db;
+  --text: #22252a;
+  --text-dim: #5a5f66;
+  --accent: #d92632;
+  --accent-alt: #b9131e;
+  --hover: #e4e7eb;
+  --danger: #ff4d4d;
+}
+
 * {
   box-sizing: border-box;
   user-select: none;
@@ -27,6 +41,7 @@ html, body {
   color: var(--text);
   font-family: var(--font-stack);
   font-size: 14px;
+  transition: background .25s, color .25s;
 }
 
 #app {
@@ -42,6 +57,10 @@ html, body {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
+  transition: background .25s, border-color .25s;
+}
+:root[data-theme="light"] #activity-bar {
+  background: #eceef1;
 }
 
 .activity-item {
@@ -83,6 +102,7 @@ html, body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: background .25s, border-color .25s;
 }
 
 .panel {
@@ -106,6 +126,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  transition: color .25s, border-color .25s;
 }
 
 .explorer-actions button {
@@ -117,6 +138,7 @@ html, body {
   cursor: pointer;
   border-radius: var(--radius);
   margin-left: 4px;
+  transition: background .2s, color .2s, border-color .2s;
 }
 .explorer-actions button:hover {
   border-color: var(--accent);
@@ -135,6 +157,7 @@ html, body {
   color: var(--text);
   border-radius: var(--radius);
   font-size: 13px;
+  transition: background .25s, color .25s, border-color .25s;
 }
 #project-name:focus {
   outline: 1px solid var(--accent);
@@ -167,6 +190,7 @@ html, body {
   max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: background .15s, color .15s;
 }
 
 .tree-item.folder > .twisty {
@@ -192,6 +216,10 @@ html, body {
   color: var(--text);
   border: 1px solid var(--accent-alt);
 }
+:root[data-theme="light"] .tree-item.active {
+  background: #dfe2e7;
+  border-color: var(--accent);
+}
 
 .tree-item .name.changed::after {
   content: "*";
@@ -204,6 +232,9 @@ html, body {
   border-left: 1px dashed #3a3c42;
   padding-left: 4px;
   display: none;
+}
+:root[data-theme="light"] .children {
+  border-left-color: #c4c9d1;
 }
 
 .folder.expanded > .children {
@@ -232,6 +263,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  transition: background .25s, border-color .25s;
 }
 
 .slot-header {
@@ -251,10 +283,14 @@ html, body {
   border-radius: var(--radius);
   cursor: pointer;
   margin-left: 4px;
+  transition: background .2s, color .2s, border-color .2s;
 }
 .slot-buttons button:hover {
   color: var(--text);
   border-color: var(--accent);
+}
+:root[data-theme="light"] .slot-buttons button {
+  background: #e1e4e9;
 }
 
 .slot.empty {
@@ -266,6 +302,7 @@ html, body {
   padding: 4px 8px 10px;
   color: var(--text-dim);
   border-top: 1px solid var(--border);
+  transition: color .25s, border-color .25s;
 }
 
 .github-section {
@@ -296,6 +333,7 @@ html, body {
   font-size: 13px;
   border-radius: var(--radius);
   cursor: pointer;
+  transition: background .2s;
 }
 .github-section button:hover {
   background: var(--accent-alt);
@@ -313,6 +351,7 @@ html, body {
   background: var(--bg-alt2);
   padding: 6px;
   border-radius: var(--radius);
+  transition: background .25s, border-color .25s;
 }
 
 /* Main */
@@ -322,6 +361,7 @@ html, body {
   flex-direction: column;
   background: var(--bg-alt2);
   position: relative;
+  transition: background .25s;
 }
 
 /* Tabs */
@@ -333,6 +373,10 @@ html, body {
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   scrollbar-width: none;
+  transition: background .25s, border-color .25s;
+}
+:root[data-theme="light"] #tabs-bar {
+  background: #d8dbe0;
 }
 #tabs-bar::-webkit-scrollbar { display: none; }
 
@@ -351,14 +395,26 @@ html, body {
   border: 1px solid transparent;
   border-bottom: none;
   max-width: 200px;
+  transition: background .15s, color .15s, border-color .15s;
+}
+:root[data-theme="light"] .tab {
+  background: #eceff3;
 }
 .tab:hover {
   background: #2d2f33;
+}
+:root[data-theme="light"] .tab:hover {
+  background: #e2e5ea;
 }
 .tab.active {
   background: #32353a;
   border-color: var(--border);
   border-bottom: 1px solid #32353a;
+}
+:root[data-theme="light"] .tab.active {
+  background: #dfe2e7;
+  border-color: #c3c8cf;
+  border-bottom: 1px solid #dfe2e7;
 }
 .tab .dirty {
   color: var(--accent);
@@ -395,10 +451,18 @@ html, body {
   resize: none;
   outline: none;
   caret-color: var(--accent);
+  transition: background .25s, color .25s;
+}
+:root[data-theme="light"] #editor {
+  background: #ffffff;
+  color: #22252a;
 }
 
 #editor:focus {
   box-shadow: inset 0 0 0 1px #2c2d30;
+}
+:root[data-theme="light"] #editor:focus {
+  box-shadow: inset 0 0 0 1px #c9ced5;
 }
 
 /* Context Menu */
@@ -413,6 +477,11 @@ html, body {
   z-index: 10000;
   border-radius: var(--radius);
   box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  transition: background .25s, border-color .25s;
+}
+:root[data-theme="light"] .context-menu {
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(0,0,0,.15);
 }
 
 .context-menu li {
@@ -420,15 +489,20 @@ html, body {
   font-size: 13px;
   cursor: pointer;
   color: var(--text);
+  transition: background .15s;
 }
 
 .context-menu li:hover {
   background: var(--hover);
   color: #fff;
 }
+:root[data-theme="light"] .context-menu li:hover {
+  color: var(--text);
+}
 
 .context-menu li.danger:hover {
   background: var(--accent);
+  color: #fff;
 }
 
 .hidden {
@@ -446,6 +520,10 @@ html, body {
   justify-content: space-between;
   padding: 0 10px;
   color: var(--text-dim);
+  transition: background .25s, border-color .25s, color .25s;
+}
+:root[data-theme="light"] #status-bar {
+  background: #eceef1;
 }
 
 #status-left span,
@@ -468,15 +546,24 @@ html, body {
 ::-webkit-scrollbar-track {
   background: #1c1d1f;
 }
+:root[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #e2e5e9;
+}
 ::-webkit-scrollbar-thumb {
   background: #303236;
   border-radius: 5px;
 }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #b6bbc2;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #3a3d42;
 }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #9fa5ad;
+}
 
-/* Inputs / dialogs (prompt fallback style) */
+/* Inputs / dialogs */
 input, button, textarea {
   font-family: var(--font-stack);
 }
