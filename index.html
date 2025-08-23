@@ -13,6 +13,8 @@
       <div class="activity-item active" data-view="explorer" title="Explorer">🗂</div>
       <div class="activity-item" data-view="slots" title="Save Slots">💾</div>
       <div class="activity-item" data-view="github" title="GitHub Clone"></div>
+      <!-- Tema Toggle -->
+      <div class="activity-item" id="btn-theme-toggle" title="Tema Değiştir (Light/Dark)">🌙</div>
       <div class="spacer"></div>
       <div class="activity-item" data-view="about" title="Hakkında">ℹ️</div>
     </div>
@@ -24,7 +26,6 @@
         <div class="panel-header">
           <span>EXPLORER</span>
           <div class="explorer-actions">
-            <!-- YENİ: Yeni Proje -->
             <button id="btn-new-project" title="Yeni Proje (Ctrl+Shift+N)">+P</button>
             <button id="btn-new-file" title="Yeni Dosya">+F</button>
             <button id="btn-new-folder" title="Yeni Klasör">+D</button>
@@ -52,7 +53,7 @@
           <label>Repo URL:
             <input id="github-url" placeholder="https://github.com/kullanici/repo veya .../tree/branch" />
           </label>
-            <button id="btn-clone">Clone</button>
+          <button id="btn-clone">Clone</button>
           <div class="small-note">
             Public repo desteklenir. Varsayılan branch main/master aranır.
           </div>
@@ -69,6 +70,7 @@
             <li>LocalStorage kalıcılık</li>
             <li>5 Save Slot</li>
             <li>GitHub public repo clone</li>
+            <li>Light / Dark Tema</li>
           </ul>
           <p>Geliştirmeye açık: tema, syntax highlight, terminal entegrasyonu vb.</p>
         </div>
