@@ -1,16 +1,13 @@
-/* DCT Code - Basit VSCode benzeri editör
-   Öz: Dosya sistemi = bellek + localStorage
-   Yapı: project = { name, files: { path: content }, openFiles: [], activeFile, created, updated }
-*/
-
+/* DCT Code - Basit VSCode benzeri editör + Light/Dark Theme */
 const STORAGE_KEY_CURRENT = "dctcode_current_project";
-const STORAGE_KEY_SLOTS = "dctcode_slots"; // array length 5 (null / {project})
+const STORAGE_KEY_SLOTS = "dctcode_slots";
 const MAX_SLOTS = 5;
+const THEME_STORAGE_KEY = "dctcode_theme"; // "dark" | "light"
 
 // State
-let project = null;         // aktif proje objesi
-let fileTreeRoot = {};      // ağaç yapısı için
-let dirtyFiles = new Set(); // değişmiş dosyalar
+let project = null;
+let fileTreeRoot = {};
+let dirtyFiles = new Set();
 let suppressEditor = false;
 
 const els = {
@@ -36,13 +33,36 @@ const els = {
   cloneProgress: document.getElementById("clone-progress"),
   newFileBtn: document.getElementById("btn-new-file"),
   newFolderBtn: document.getElementById("btn-new-folder"),
-  // YENİ: Yeni Proje butonu
   newProjectBtn: document.getElementById("btn-new-project"),
+  themeToggle: document.getElementById("btn-theme-toggle"),
   menus: {
     file: document.getElementById("file-context"),
     tab: document.getElementById("tab-context")
   }
 };
+
+// ---------- Theme ----------
+function loadTheme() {
+  return localStorage.getItem(THEME_STORAGE_KEY) || "dark";
+}
+function saveTheme(theme) {
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "");
+  // Icon
+  if (els.themeToggle) {
+    els.themeToggle.textContent = theme === "light" ? "☀️" : "🌙";
+    els.themeToggle.title = theme === "light" ? "Dark moda geç" : "Light moda geç";
+  }
+}
+function toggleTheme() {
+  const current = loadTheme();
+  const next = current === "light" ? "dark" : "light";
+  saveTheme(next);
+  applyTheme(next);
+  flashProgress(`Tema: ${next}`);
+}
 
 // ---------- Utility ----------
 function nowISO() { return new Date().toISOString(); }
@@ -97,7 +117,6 @@ function pathParts(p) {
   return p.split("/").filter(Boolean);
 }
 
-// Build file tree object => nested nodes { type:'folder'|'file', children:{}, name }
 function buildTree(filesMap) {
   const root = { type:"folder", name:"/", children:{} };
   Object.keys(filesMap).sort().forEach(fp => {
@@ -417,11 +436,7 @@ function renderSlots() {
     const info = document.createElement("div");
     info.style.fontSize = "11px";
     info.style.color = "var(--text-dim)";
-    if (slot) {
-      info.textContent = `${slot.name} | ${slot.updated}`;
-    } else {
-      info.textContent = "Boş";
-    }
+    info.textContent = slot ? `${slot.name} | ${slot.updated}` : "Boş";
     div.appendChild(header);
     div.appendChild(info);
     els.slotsList.appendChild(div);
@@ -486,17 +501,19 @@ function markDirtyUI(path) {
   }
 }
 
-// Kısayol: Ctrl+S kaydet, Ctrl+Shift+N yeni proje
+// Kısayollar: Ctrl+S kaydet, Ctrl+Shift+N yeni proje, Ctrl+Alt+T tema
 document.addEventListener("keydown", (e) => {
-  // Kaydet
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();
     saveAll();
   }
-  // Yeni Proje
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "n") {
     e.preventDefault();
     newProject();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.altKey && e.key.toLowerCase() === "t") {
+    e.preventDefault();
+    toggleTheme();
   }
 });
 
@@ -533,9 +550,6 @@ els.activityItems.forEach(item => {
 // ---------- Context Menus ----------
 let contextTarget = null;
 document.addEventListener("click", () => hideAllMenus());
-document.addEventListener("contextmenu", (e) => {
-  // global engelleme yok
-});
 
 function showContextMenu(type, x, y, target) {
   hideAllMenus();
@@ -715,10 +729,12 @@ function init() {
     project = createEmptyProject("DCT Project");
     saveCurrentProject();
   }
+  // Tema ilk yükleme
+  applyTheme(loadTheme());
+
   fullRender();
   renderSlots();
 
-  // Yeni dosya / klasör butonları
   els.newFileBtn.addEventListener("click", () => {
     const name = prompt("Dosya adı:");
     if (!name) return;
@@ -730,9 +746,10 @@ function init() {
     createFolder(name);
     renderFileTree();
   });
-
-  // YENİ: Yeni Proje butonu
   els.newProjectBtn.addEventListener("click", () => newProject());
+  if (els.themeToggle) {
+    els.themeToggle.addEventListener("click", toggleTheme);
+  }
 
   window.addEventListener("beforeunload", (e) => {
     if (dirtyFiles.size > 0) {
@@ -744,4 +761,4 @@ function init() {
 
 init();
 
-// Gelecekte: drag-drop load, zip export, syntax highlight, Monaco integration
+/* Gelecekte: drag-drop load, zip export, syntax highlight, Monaco integration */
