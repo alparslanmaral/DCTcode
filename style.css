@@ -9,9 +9,27 @@
   --accent-alt: #c51724;
   --hover: #313337;
   --danger: #ff4d4d;
-  --font-stack: "Segoe UI", "Ubuntu", "Helvetica Neue", Arial, sans-serif;
   --radius: 4px;
   --tab-height: 32px;
+  --editor-bg: #1e1f22;
+  --editor-line-highlight: #2c2f33;
+  --shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+
+/* Light tema değişkenleri */
+:root[data-theme="light"] {
+  --bg: #f3f3f5;
+  --bg-alt: #ffffff;
+  --bg-alt2: #fafafa;
+  --border: #cfd1d6;
+  --text: #22262b;
+  --text-dim: #5a6068;
+  --accent: #c51724;
+  --accent-alt: #a3121d;
+  --hover: #eceef1;
+  --editor-bg: #ffffff;
+  --editor-line-highlight: #f2f4f7;
+  --shadow: 0 4px 16px rgba(0,0,0,.12);
 }
 
 * {
@@ -25,7 +43,7 @@ html, body {
   height: 100%;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font-stack);
+  font-family: "Segoe UI", "Ubuntu", "Helvetica Neue", Arial, sans-serif;
   font-size: 14px;
 }
 
@@ -42,6 +60,9 @@ html, body {
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--border);
+}
+:root[data-theme="light"] #activity-bar {
+  background: #e4e6ea;
 }
 
 .activity-item {
@@ -77,7 +98,7 @@ html, body {
 
 /* Side Bar */
 #side-bar {
-  width: 280px;
+  width: 300px;
   background: var(--bg-alt);
   border-right: 1px solid var(--border);
   display: flex;
@@ -164,7 +185,7 @@ html, body {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
-  max-width: 240px;
+  max-width: 260px;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -192,6 +213,10 @@ html, body {
   color: var(--text);
   border: 1px solid var(--accent-alt);
 }
+:root[data-theme="light"] .tree-item.active {
+  background: #dfe3e8;
+  border-color: var(--accent);
+}
 
 .tree-item .name.changed::after {
   content: "*";
@@ -204,6 +229,9 @@ html, body {
   border-left: 1px dashed #3a3c42;
   padding-left: 4px;
   display: none;
+}
+:root[data-theme="light"] .children {
+  border-left-color: #c9ccd1;
 }
 
 .folder.expanded > .children {
@@ -232,6 +260,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  box-shadow: var(--shadow);
 }
 
 .slot-header {
@@ -252,6 +281,9 @@ html, body {
   cursor: pointer;
   margin-left: 4px;
 }
+:root[data-theme="light"] .slot-buttons button {
+  background: #e8eaed;
+}
 .slot-buttons button:hover {
   color: var(--text);
   border-color: var(--accent);
@@ -268,6 +300,7 @@ html, body {
   border-top: 1px solid var(--border);
 }
 
+/* GitHub */
 .github-section {
   padding: 10px;
   font-size: 13px;
@@ -334,6 +367,9 @@ html, body {
   overflow-x: auto;
   scrollbar-width: none;
 }
+:root[data-theme="light"] #tabs-bar {
+  background: #e8eaed;
+}
 #tabs-bar::-webkit-scrollbar { display: none; }
 
 .tab {
@@ -352,13 +388,24 @@ html, body {
   border-bottom: none;
   max-width: 200px;
 }
+:root[data-theme="light"] .tab {
+  background: #d9dcdf;
+}
 .tab:hover {
   background: #2d2f33;
+}
+:root[data-theme="light"] .tab:hover {
+  background: #cfd3d7;
 }
 .tab.active {
   background: #32353a;
   border-color: var(--border);
   border-bottom: 1px solid #32353a;
+}
+:root[data-theme="light"] .tab.active {
+  background: #ffffff;
+  border-color: var(--border);
+  border-bottom: 1px solid #ffffff;
 }
 .tab .dirty {
   color: var(--accent);
@@ -375,30 +422,15 @@ html, body {
   color: var(--accent);
 }
 
-/* Editor */
+/* Editor (Monaco container) */
 #editor-container {
   flex: 1;
   position: relative;
   display: flex;
 }
-#editor {
-  flex: 1;
+#editor.editor-monaco {
   width: 100%;
   height: 100%;
-  background: #1e1f22;
-  border: none;
-  padding: 14px;
-  font-family: "Fira Code", "Consolas", monospace;
-  font-size: 14px;
-  color: #e6e9ee;
-  line-height: 1.4;
-  resize: none;
-  outline: none;
-  caret-color: var(--accent);
-}
-
-#editor:focus {
-  box-shadow: inset 0 0 0 1px #2c2d30;
 }
 
 /* Context Menu */
@@ -412,7 +444,10 @@ html, body {
   min-width: 160px;
   z-index: 10000;
   border-radius: var(--radius);
-  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  box-shadow: var(--shadow);
+}
+:root[data-theme="light"] .context-menu {
+  background: #ffffff;
 }
 
 .context-menu li {
@@ -424,11 +459,12 @@ html, body {
 
 .context-menu li:hover {
   background: var(--hover);
-  color: #fff;
+  color: var(--text);
 }
 
 .context-menu li.danger:hover {
   background: var(--accent);
+  color: #fff;
 }
 
 .hidden {
@@ -447,9 +483,13 @@ html, body {
   padding: 0 10px;
   color: var(--text-dim);
 }
+:root[data-theme="light"] #status-bar {
+  background: #d5d8dc;
+}
 
 #status-left span,
-#status-right span {
+#status-right span,
+#status-right button {
   margin-right: 14px;
 }
 
@@ -460,6 +500,19 @@ html, body {
   color: var(--accent);
 }
 
+#theme-toggle {
+  background: var(--bg-alt2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+#theme-toggle:hover {
+  border-color: var(--accent);
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar {
   width: 10px;
@@ -468,17 +521,25 @@ html, body {
 ::-webkit-scrollbar-track {
   background: #1c1d1f;
 }
+:root[data-theme="light"] ::-webkit-scrollbar-track {
+  background: #e4e6e9;
+}
 ::-webkit-scrollbar-thumb {
   background: #303236;
   border-radius: 5px;
 }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #b3b6bb;
+}
 ::-webkit-scrollbar-thumb:hover {
   background: #3a3d42;
 }
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #9a9ea3;
+}
 
-/* Inputs / dialogs (prompt fallback style) */
-input, button, textarea {
-  font-family: var(--font-stack);
+input, button {
+  font-family: inherit;
 }
 
 /* About */
@@ -496,13 +557,24 @@ a:hover {
   text-decoration: underline;
 }
 
+/* Monaco ek temalar için highlight (opsiyonel) */
+.monaco-editor .squiggly-error {
+  border-bottom: 2px wavy var(--accent);
+}
+.monaco-editor .squiggly-warning {
+  border-bottom: 2px wavy #e6a700;
+}
+.monaco-editor .squiggly-info {
+  border-bottom: 2px wavy #3fa5ff;
+}
+
 /* Responsive */
 @media (max-width: 860px) {
   #side-bar {
-    width: 220px;
+    width: 240px;
   }
   .tree-item {
-    max-width: 180px;
+    max-width: 200px;
   }
   #project-name {
     font-size: 12px;
