@@ -17,7 +17,7 @@ Amaç: Bilgisayarınıza ekstra program (VSCode / GitHub Desktop) kurmadan; hatt
 7. Güvenlik Uyarıları
 8. Sık Sorulan Sorular (SSS)
 9. Sorun Giderme
-10. Lisans
+10. Geliştirici
 
 ---
 
