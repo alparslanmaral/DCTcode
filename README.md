@@ -87,6 +87,6 @@ Aktif proje: `dctcode_current_project`
 - Performans küçük projeler içindir; binlerce dosyada optimize edilmesi gerekir.
 - Güvenlik: Tamamen client-side; hassas token kullanmayın. Private repo klonu yok.
 
-## Lisans
+## Geliştirici
 
-(İsteğe göre ekleyin – örn. MIT)
+Ahmet Alparslan Maral
