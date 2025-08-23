@@ -36,6 +36,8 @@ const els = {
   cloneProgress: document.getElementById("clone-progress"),
   newFileBtn: document.getElementById("btn-new-file"),
   newFolderBtn: document.getElementById("btn-new-folder"),
+  // YENİ: Yeni Proje butonu
+  newProjectBtn: document.getElementById("btn-new-project"),
   menus: {
     file: document.getElementById("file-context"),
     tab: document.getElementById("tab-context")
@@ -167,11 +169,9 @@ function renderNode(node) {
     showContextMenu("file", e.pageX, e.pageY, node);
   });
 
-  // Active style
   if (node.path === project.activeFile) {
     item.classList.add("active");
   }
-  // Dirty mark
   if (dirtyFiles.has(node.path)) {
     name.classList.add("changed");
   }
@@ -297,8 +297,6 @@ function createFile(path, content = "") {
 }
 
 function createFolder(path) {
-  // Folder = placeholder by ensuring at least one hidden sentinel? VSCode'da boş klasör gösterilir.
-  // Burada boş klasörleri göstermek için bir meta sistem gerekebilir. Basitlik için .dct_folder markerı koyabiliriz.
   const marker = path.replace(/\/?$/,"/") + ".dct_folder";
   if (project.files[marker]) {
     alert("Klasör zaten var.");
@@ -329,11 +327,10 @@ function renamePath(oldPath, newPath) {
   project.files[newPath] = content;
   delete project.files[oldPath];
 
-  // tabs
   const oi = project.openFiles.indexOf(oldPath);
   if (oi >= 0) project.openFiles[oi] = newPath;
   if (project.activeFile === oldPath) project.activeFile = newPath;
-  // dirty set
+
   if (dirtyFiles.has(oldPath)) {
     dirtyFiles.delete(oldPath);
     dirtyFiles.add(newPath);
@@ -347,8 +344,6 @@ function renamePath(oldPath, newPath) {
 
 function deletePath(path) {
   if (!project.files[path]) {
-    // might be folder sentinel
-    // Delete all starting with path/
     const prefix = path.replace(/\/?$/,"/");
     const keys = Object.keys(project.files).filter(k => k.startsWith(prefix));
     if (keys.length === 0) return;
@@ -376,6 +371,20 @@ function deletePath(path) {
   }
   saveCurrentProject();
   fullRender();
+}
+
+// ---------- Yeni Proje ----------
+function newProject() {
+  if (dirtyFiles.size > 0) {
+    const proceed = confirm("Kaydedilmemiş değişiklikler var. Yine de yeni proje oluşturulsun mu?");
+    if (!proceed) return;
+  }
+  const name = prompt("Yeni proje adı:", "Yeni Proje") || "Yeni Proje";
+  project = createEmptyProject(name);
+  dirtyFiles.clear();
+  saveCurrentProject();
+  fullRender();
+  flashProgress("Yeni proje oluşturuldu.");
 }
 
 // ---------- Slots ----------
@@ -422,7 +431,7 @@ function renderSlots() {
 function saveToSlot(index) {
   if (!project) return;
   const slots = loadSlots();
-  slots[index] = JSON.parse(JSON.stringify(project)); // derin kopya
+  slots[index] = JSON.parse(JSON.stringify(project));
   saveSlots(slots);
   renderSlots();
   flashProgress(`Slot ${index+1} kaydedildi.`);
@@ -463,7 +472,6 @@ els.editor.addEventListener("input", () => {
 });
 
 function markDirtyUI(path) {
-  // Tab
   const tab = document.querySelector(`.tab[data-path="${CSS.escape(path)}"]`);
   if (tab && !tab.querySelector(".dirty")) {
     const title = tab.querySelector("span");
@@ -472,18 +480,23 @@ function markDirtyUI(path) {
     dirty.textContent = " *";
     title.appendChild(dirty);
   }
-  // Tree
   const treeName = document.querySelector(`.tree-item.file[data-path="${CSS.escape(path)}"] .name`);
   if (treeName && !treeName.classList.contains("changed")) {
     treeName.classList.add("changed");
   }
 }
 
-// Ctrl+S kaydet
+// Kısayol: Ctrl+S kaydet, Ctrl+Shift+N yeni proje
 document.addEventListener("keydown", (e) => {
+  // Kaydet
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
     e.preventDefault();
     saveAll();
+  }
+  // Yeni Proje
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "n") {
+    e.preventDefault();
+    newProject();
   }
 });
 
@@ -521,7 +534,7 @@ els.activityItems.forEach(item => {
 let contextTarget = null;
 document.addEventListener("click", () => hideAllMenus());
 document.addEventListener("contextmenu", (e) => {
-  // e.preventDefault() global engellemek istemiyoruz.
+  // global engelleme yok
 });
 
 function showContextMenu(type, x, y, target) {
@@ -631,7 +644,6 @@ els.cloneBtn.addEventListener("click", async () => {
       created: nowISO(),
       updated: nowISO()
     };
-    // Açılsın diye README veya ilk dosya
     if (newFiles["README.md"]) {
       openFile("README.md");
     } else if (blobs.length > 0) {
@@ -660,8 +672,6 @@ function flashProgress(msg) {
 
 // Parse GitHub URL
 function parseGitHubUrl(url) {
-  // Örn: https://github.com/user/repo
-  //      https://github.com/user/repo/tree/branch
   const m = url.match(/github\.com\/([^\/]+)\/([^\/#]+)(?:\/tree\/([^\/]+))?/);
   if (!m) throw new Error("Geçersiz GitHub URL");
   return { owner: m[1], repo: m[2].replace(/\.git$/,""), branch: m[3] || null };
@@ -669,13 +679,11 @@ function parseGitHubUrl(url) {
 
 async function detectBranch(owner, repo, branch) {
   if (branch) return branch;
-  // main -> master fallback
   const candidates = ["main","master"];
   for (const c of candidates) {
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches/${c}`);
     if (res.status === 200) return c;
   }
-  // fallback: fetch repo default branch
   const info = await fetchJSON(`https://api.github.com/repos/${owner}/${repo}`);
   return info.default_branch;
 }
@@ -722,6 +730,9 @@ function init() {
     createFolder(name);
     renderFileTree();
   });
+
+  // YENİ: Yeni Proje butonu
+  els.newProjectBtn.addEventListener("click", () => newProject());
 
   window.addEventListener("beforeunload", (e) => {
     if (dirtyFiles.size > 0) {
