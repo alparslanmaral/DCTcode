@@ -1,92 +1,88 @@
 # DCT Code
 
-Hafif, tarayıcı tabanlı bir mini “VSCode benzeri” proje/dosya editörü. LocalStorage üzerinde kalıcılık, çoklu kayıt slotları, GitHub public repo klonlama ve Light/Dark tema desteği sağlar.
+Hafif, tarayıcı tabanlı mini editör (VSCode benzeri). LocalStorage kalıcılık, kayıt slotları, GitHub public repo klon, Light/Dark tema ve GitHub PAT ile push desteği içerir.
 
 ## Özellikler
 
-- Yeni Proje oluşturma (README.md ile otomatik başlangıç)
-- Dosya / klasör (sentinel) oluşturma, yeniden adlandırma, silme
-- Sekmeli çoklu açık dosya görünümü
-- Değişiklik (dirty) takibi ve toplu kaydetme (Ctrl+S)
-- 5 adet Save Slot (projenin tamamını kopyala/yükle)
-- GitHub public repository klon (main/master branch otomatik tespit)
-- Light / Dark tema (kalıcı) – Toggle: Activity bar’daki 🌙/☀️ ikon
-- Klavyeden kısayollar
-- Kaydedilmemiş değişiklik uyarısı (beforeunload)
+- Yeni proje oluşturma (README.md başlangıcı)
+- Dosya / klasör (sentinel) yönetimi
+- Sekmeli çoklu dosya
+- Dirty takibi, toplu kaydet (Ctrl+S)
+- 5 Save Slot (snapshot)
+- GitHub public repo klon (main/master tespiti)
+- Light / Dark tema (kalıcı)
+- GitHub’a Personal Access Token ile tek commit push
+- Branch kontrol / oluşturma
+- Opsiyonel alt klasör (prefix) ile push
 
-## Ekran Görünümü (Özet)
+## PAT (Personal Access Token) ile GitHub Push
 
-- Sol Activity Bar: Explorer, Slots, GitHub Clone, Tema, About
-- Explorer: Proje adı düzenleme + dosya ağacı
-- Save Slots: Mevcut projenin anlık snapshot’ı
-- GitHub Clone: Repo URL girişi (örn: `https://github.com/user/repo` veya belirli branch: `.../tree/dev`)
-- Tema Simge: Light ↔ Dark
-- Status Bar: Aktif proje, dosya, kaydetme durumu
+### Neden PAT?
+Backend olmadan (sadece client-side) güvenli OAuth akışı yapılamadığı için push işlemleri kullanıcıdan alınan PAT ile yapılır.
 
-## Kurulum
+### Token Nasıl Alınır?
+1. GitHub: Settings → Developer Settings → Personal Access Tokens (classic veya fine-grained).
+2. Scope:
+   - Sadece public repo: `public_repo`
+   - Private repo da dahil: `repo`
+3. Süre (expiration) belirleyin.
+4. Token’ı kopyalayın (ghp_ veya fine-grained format).
+5. Uygulamadaki “GitHub PAT” kutusuna yapıştır → “Token Kaydet” → “Doğrula”.
 
-Tarayıcıda açmanız yeterli:
-```
-index.html
-```
+### Push Akışı
+1. Token doğrulanır (USER bilgisi gelir).
+2. “Repo Getir” → repo listesi seçilir.
+3. Branch adı (örn. main) yazılır.
+   - Yoksa “Branch Kontrol” → yoksa “Branch Oluştur”.
+4. Commit mesajı yazılır.
+5. (Opsiyonel) Alt klasör girilebilir (ör. `src` → tüm dosyalar repo içinde `src/` altına atılır).
+6. “Push Proje” → Tek commit içinde tüm dosyalar gönderilir.
 
-Sunucu gerekmez; tamamen LocalStorage kullanır.
+### Teknik Push Adımları
+1. `GET /repos/:repo/git/ref/heads/:branch` → base commit
+2. Base commit içinden base tree alınır
+3. Yerel her dosya için `POST /git/blobs`
+4. `POST /git/trees` (base_tree + yeni blob’lar)
+5. `POST /git/commits` (parents = [base commit])
+6. `PATCH /git/refs/heads/:branch` → ref güncelle
+
+### Güvenlik Uyarısı
+- Token localStorage’da saklanır (anahtar: `dctcode_pat`).
+- XSS olursa token çalınabilir.
+- İşiniz bitince “Sil / Çıkış” ile token’ı kaldırın.
 
 ## Kısayollar
 
 | Kısayol | İşlev |
 |--------|-------|
-| Ctrl+S veya Cmd+S | Tüm değişiklikleri kaydet |
-| Ctrl+Shift+N | Yeni proje oluştur |
-| Ctrl+Alt+T | Tema değiştir (Light/Dark) |
-| (Sekmedeki ×) | Dosya sekmesini kapat |
-
-## Tema
-
-- Varsayılan: Dark
-- Anahtar: `dctcode_theme` (LocalStorage)
-- CSS değişkenleriyle (CSS Custom Properties) kolay genişletilebilir.
-- Açık modda arka planlar açık gri tonlara, metinler koyu renklere döner; vurgu (accent) kırmızı sabit kalır.
+| Ctrl+S | Kaydet |
+| Ctrl+Shift+N | Yeni proje |
+| Ctrl+Alt+T | Tema değiştir |
+| (Sekme ×) | Dosya sekmesini kapat |
 
 ## Veri Yapısı
 
 ```json
 {
   "name": "ProjeAdı",
-  "files": { "path/dosya.txt": "içerik", "README.md": "# ..." },
-  "openFiles": ["README.md","main.js"],
+  "files": { "README.md": "# ..." },
+  "openFiles": ["README.md"],
   "activeFile": "README.md",
   "created": "ISO",
   "updated": "ISO"
 }
 ```
 
-Slotlar: `dctcode_slots` -> (en fazla 5) proje snapshot dizisi  
-Aktif proje: `dctcode_current_project`
+Klasörler için `.dct_folder` sentinel dosyası kullanılır.
 
-## GitHub Klon Özeti
-
-1. Repo URL girilir (public).
-2. Varsayılan branch tespiti: (girildiyse branch), yoksa main/master kontrolü, fallback repo metadata.
-3. `git/trees/:branch?recursive=1` ile tüm blob’lar liste.
-4. Raw içerik indirip `project.files` objesine yazılır.
-
-## Genişletme Fikirleri
+## Roadmap Fikirleri
 
 - Zip export / import
-- Monaco Editor entegrasyonu
-- Syntax highlight + dil algılama
-- Dosya arama (full-text)
-- Basit terminal / komut paneli
-- Klasör yeniden adlandırma desteği
-- Çoklu proje yönetimi (liste ekranı)
+- Monaco Editor
+- Dosya arama & filtre
+- Çoklu repo push seçeneği
+- Klasör rename
+- Diff / değişiklik önizleme
 
-## Geliştirme Notları
-
-- Klasörler gerçek dizin değil; boş klasörü göstermek için `.dct_folder` sentinel dosyası ekleniyor.
-- Performans küçük projeler içindir; binlerce dosyada optimize edilmesi gerekir.
-- Güvenlik: Tamamen client-side; hassas token kullanmayın. Private repo klonu yok.
-
-## Geliştirici
-
+## Geliştiricii
 Ahmet Alparslan Maral

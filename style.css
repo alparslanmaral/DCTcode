@@ -595,3 +595,127 @@ a:hover {
     font-size: 12px;
   }
 }
+
+.github-auth-box {
+  border: 1px solid var(--border);
+  background: var(--bg-alt2);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+
+.github-auth-box.authenticated {
+  border-color: var(--accent);
+}
+
+.github-auth-actions button,
+.github-push-actions button {
+  background: #2f3136;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-right: 6px;
+  margin-bottom: 4px;
+  transition: background .2s, color .2s, border-color .2s;
+}
+.github-auth-actions button:hover,
+.github-push-actions button:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+:root[data-theme="light"] .github-auth-actions button,
+:root[data-theme="light"] .github-push-actions button {
+  background: #e1e4e9;
+}
+
+.github-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.github-user img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+
+.github-push-box {
+  border: 1px solid var(--border);
+  background: var(--bg-alt2);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.github-push-box select,
+.github-push-box input,
+.github-auth-box input {
+  width: 100%;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  transition: background .25s, color .25s, border-color .25s;
+}
+.github-push-box input:focus,
+.github-auth-box input:focus,
+.github-push-box select:focus {
+  outline: 1px solid var(--accent);
+}
+
+.github-inline {
+  display: flex;
+  gap: 8px;
+}
+
+.github-inline > * {
+  flex: 1;
+}
+
+.github-warning {
+  font-size: 11px;
+  color: var(--accent);
+  line-height: 1.4;
+}
+
+.github-small-note {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.github-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+.github-badge {
+  display: inline-block;
+  background: var(--accent);
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-size: 10px;
+  color: #fff;
+  margin-left: 6px;
+}
+
+.github-log-section-title {
+  font-weight: 600;
+  margin-top: 4px;
+  font-size: 12px;
+  letter-spacing: .5px;
+}
