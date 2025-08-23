@@ -1,33 +1,10 @@
 <!DOCTYPE html>
-<html lang="tr" data-theme="dark">
+<html lang="tr">
 <head>
   <meta charset="UTF-8" />
   <title>DCT Code</title>
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
-
-  <!-- Monaco Editor CDN (yalnızca public internet gerekli) -->
-  <script>
-    window.MonacoEnvironment = {
-      getWorkerUrl: function (_, label) {
-        const base = "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/";
-        const workers = {
-          'json': 'vs/language/json/json.worker.min.js',
-          'css': 'vs/language/css/css.worker.min.js',
-          'html': 'vs/language/html/html.worker.min.js',
-          'typescript': 'vs/language/typescript/ts.worker.min.js',
-          'javascript': 'vs/language/typescript/ts.worker.min.js',
-          'default': 'vs/base/worker/workerMain.min.js'
-        };
-        const worker = workers[label] || workers['default'];
-        return URL.createObjectURL(new Blob([`
-          self.MonacoEnvironment={baseUrl:'${base}'};
-          importScripts('${base}${worker}');
-        `], { type: 'text/javascript' }));
-      }
-    };
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.min.js" integrity="sha512-+QY+Hds1I4pVEbfx21qI05Q5HXZPxJ09FTofFcR0SPSchgaGw+ijhTkpBF6r8/37qBngCQtgM1pPS4vSgPRNYA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
   <div id="app">
@@ -49,7 +26,6 @@
           <div class="explorer-actions">
             <button id="btn-new-file" title="Yeni Dosya">+F</button>
             <button id="btn-new-folder" title="Yeni Klasör">+D</button>
-            <button id="btn-export-zip" title="ZIP olarak indir">ZIP</button>
           </div>
         </div>
         <div id="project-name-wrapper">
@@ -74,7 +50,7 @@
           <label>Repo URL:
             <input id="github-url" placeholder="https://github.com/kullanici/repo veya .../tree/branch" />
           </label>
-            <button id="btn-clone">Clone</button>
+          <button id="btn-clone">Clone</button>
           <div class="small-note">
             Public repo desteklenir. Varsayılan branch main/master aranır.
           </div>
@@ -91,11 +67,8 @@
             <li>LocalStorage kalıcılık</li>
             <li>5 Save Slot</li>
             <li>GitHub public repo clone</li>
-            <li>ZIP dışa aktarım</li>
-            <li>Light / Dark tema</li>
-            <li>HTML / CSS / JS temel lint</li>
           </ul>
-          <p>Geliştirmeye açık: terminal, arama, git push vb.</p>
+          <p>Geliştirmeye açık: tema, syntax highlight, terminal entegrasyonu vb.</p>
         </div>
       </div>
     </div>
@@ -104,8 +77,7 @@
     <div id="main">
       <div id="tabs-bar"></div>
       <div id="editor-container">
-        <!-- Monaco editör burada render edilecek -->
-        <div id="editor" class="editor-monaco"></div>
+        <textarea id="editor" spellcheck="false"></textarea>
       </div>
     </div>
   </div>
@@ -131,7 +103,6 @@
       <span id="status-file">No File</span>
     </div>
     <div id="status-right">
-      <button id="theme-toggle" title="Tema Değiştir (Light/Dark)">🌙</button>
       <span id="status-changed">Saved</span>
     </div>
   </div>
