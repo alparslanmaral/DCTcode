@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>DCT Code</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Activity Bar -->
+    <div id="activity-bar">
+      <div class="activity-item active" data-view="explorer" title="Explorer">🗂</div>
+      <div class="activity-item" data-view="slots" title="Save Slots">💾</div>
+      <div class="activity-item" data-view="github" title="GitHub Clone"></div>
+      <div class="spacer"></div>
+      <div class="activity-item" data-view="about" title="Hakkında">ℹ️</div>
+    </div>
+
+    <!-- Side Bar -->
+    <div id="side-bar">
+      <!-- Explorer -->
+      <div class="panel" id="panel-explorer">
+        <div class="panel-header">
+          <span>EXPLORER</span>
+          <div class="explorer-actions">
+            <button id="btn-new-file" title="Yeni Dosya">+F</button>
+            <button id="btn-new-folder" title="Yeni Klasör">+D</button>
+          </div>
+        </div>
+        <div id="project-name-wrapper">
+          <input id="project-name" placeholder="Proje Adı" />
+        </div>
+        <ul id="file-tree" class="tree-root"></ul>
+      </div>
+
+      <!-- Slots -->
+      <div class="panel hidden" id="panel-slots">
+        <div class="panel-header"><span>SAVE SLOTS (5)</span></div>
+        <div id="slots-list"></div>
+        <div class="slot-hint">
+          Mevcut projeni seçtiğin slot'a kaydedebilir veya slot'tan yükleyebilirsin.
+        </div>
+      </div>
+
+      <!-- GitHub -->
+      <div class="panel hidden" id="panel-github">
+        <div class="panel-header"><span>GITHUB CLONE</span></div>
+        <div class="github-section">
+          <label>Repo URL:
+            <input id="github-url" placeholder="https://github.com/kullanici/repo veya .../tree/branch" />
+          </label>
+          <button id="btn-clone">Clone</button>
+          <div class="small-note">
+            Public repo desteklenir. Varsayılan branch main/master aranır.
+          </div>
+          <div id="clone-progress"></div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="panel hidden" id="panel-about">
+        <div class="panel-header"><span>HAKKINDA</span></div>
+        <div class="about">
+          <p>DCT Code - Hafif web tabanlı VSCode benzeri editör.</p>
+          <ul>
+            <li>LocalStorage kalıcılık</li>
+            <li>5 Save Slot</li>
+            <li>GitHub public repo clone</li>
+          </ul>
+          <p>Geliştirmeye açık: tema, syntax highlight, terminal entegrasyonu vb.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main / Editor -->
+    <div id="main">
+      <div id="tabs-bar"></div>
+      <div id="editor-container">
+        <textarea id="editor" spellcheck="false"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Menus -->
+  <ul id="file-context" class="context-menu hidden">
+    <li data-action="new-file">Yeni Dosya</li>
+    <li data-action="new-folder">Yeni Klasör</li>
+    <li data-action="rename">Yeniden Adlandır</li>
+    <li data-action="delete" class="danger">Sil</li>
+  </ul>
+
+  <ul id="tab-context" class="context-menu hidden">
+    <li data-action="close">Sekmeyi Kapat</li>
+    <li data-action="close-others">Diğerlerini Kapat</li>
+    <li data-action="close-all">Hepsini Kapat</li>
+  </ul>
+
+  <!-- Status Bar -->
+  <div id="status-bar">
+    <div id="status-left">
+      <span id="status-project">No Project</span>
+      <span id="status-file">No File</span>
+    </div>
+    <div id="status-right">
+      <span id="status-changed">Saved</span>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
