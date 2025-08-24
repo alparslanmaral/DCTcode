@@ -160,30 +160,49 @@ function buildTree(filesMap) {
     .forEach(fp => {
       const isSentinel = fp.endsWith(".dct_folder");
       const parts = pathParts(fp);
-      // Sentinel ise son parçayı (".dct_folder") ağaçta dosya olarak eklemeyeceğiz
+      // Sentinel ise son parça (.dct_folder) klasör göstermek için kullanılmaz
       const limit = isSentinel ? parts.length - 1 : parts.length;
-      if (limit <= 0) return; // güvenlik
+      if (limit <= 0) return;
 
       let cur = root;
       for (let i = 0; i < limit; i++) {
         const part = parts[i];
         const isLast = (i === limit - 1);
+
+        // Eğer sentinel ise son “anlamlı” segment mutlaka klasör olmalı.
+        // Sentinel değilse ve son segment ise bu bir dosya (file) kabul edilir.
+        const shouldBeFolder = isSentinel || !isLast;
+
         if (!cur.children[part]) {
-            cur.children[part] = isLast
-              ? { type: "file", name: part, path: parts.slice(0, i + 1).join("/") }
-              : { type: "folder", name: part, children: {}, path: parts.slice(0, i + 1).join("/") };
+          if (shouldBeFolder) {
+            cur.children[part] = {
+              type: "folder",
+              name: part,
+              children: {},
+              path: parts.slice(0, i + 1).join("/")
+            };
+          } else {
+            cur.children[part] = {
+              type: "file",
+              name: part,
+              path: parts.slice(0, i + 1).join("/")
+            };
+          }
         } else {
-          // Eğer mevcut node dosya olarak eklenmiş ama aslında klasör olmalıysa (teorik edge)
-          if (isLast && !isSentinel && cur.children[part].type === "folder") {
-            // bırak
+          // Daha önce yanlışlıkla 'file' olarak açılmış ama şimdi klasör olması gerektiğini anladık ise dönüştür
+          if (shouldBeFolder && cur.children[part].type === "file") {
+            cur.children[part] = {
+              type: "folder",
+              name: part,
+              children: {},
+              path: cur.children[part].path
+            };
           }
         }
         cur = cur.children[part];
       }
-
-      // Eğer sentinel değilse ve son node file olarak eklendiyse tamamdır.
-      // Sentinel ise dosya düğümü eklemedik, sadece klasör zincirini oluşturduk.
-      // (Boş klasör böylece görünür.)
+      // Sentinel ise ayrıca dosya node eklemiyoruz.
+      // Normal dosya ise zaten yukarıda eklendi.
     });
 
   return root;
