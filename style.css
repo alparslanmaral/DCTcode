@@ -719,3 +719,6 @@ a:hover {
   font-size: 12px;
   letter-spacing: .5px;
 }
+
+.tree-item.folder + .children { display: none; }
+.tree-item.folder.expanded + .children { display: block; }
