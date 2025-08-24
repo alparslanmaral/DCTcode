@@ -1,9 +1,17 @@
-/* DCT Code - Klasör görünürlük & dosya açma fix (sade buildTree) + ZIP + Push
-   Ana düzeltmeler:
-   - buildTree sade: sentinel (.dct_folder) klasör üretir, diğerleri dosya
-   - childrenWrap için inline display NONE kaldırıldı (CSS kontrol edecek)
-   - renderNode: sadece expanded sınıfı ile aç/kapat
-   - openFile: debug log ve güvenli kontroller
+/* DCT Code - Final (Güncel) script.js
+   İçerik:
+   - Klasör sistemi (sentinel .dct_folder)
+   - Deterministik buildTree (klon + yerel dosyalar)
+   - Klasör expand state (expandedFolders)
+   - Dosya oluşturma / açma sırası düzeltildi (createFile -> renderFileTree -> openFile)
+   - openFile retry (yeni eklenen dosya anında bulunamazsa 2 defa daha dener)
+   - ZIP Export
+   - Save Slots
+   - Tema
+   - GitHub Clone (public)
+   - GitHub Push (PAT, tek commit, prefix desteği)
+   - Branch kontrol / oluşturma
+   - Debug yardımcıları (window.DCT_DEBUG_ON / OFF / DUMP / debugOpen / debugCreate)
 */
 
 const STORAGE_KEY_CURRENT = "dctcode_current_project";
@@ -23,7 +31,7 @@ const expandedFolders = new Set();
 let DCT_DEBUG = false;
 function dbg(...a){ if(DCT_DEBUG) console.log("[DCT]", ...a); }
 
-/* ------------- ELEMENTS (değişmedi) ------------- */
+/* ---------------- ELEMENTS ---------------- */
 const els = {
   activityItems: document.querySelectorAll(".activity-item"),
   panels: {
@@ -78,7 +86,7 @@ const els = {
   }
 };
 
-/* ------------- UTILS ------------- */
+/* ---------------- UTILS ---------------- */
 function nowISO(){ return new Date().toISOString(); }
 function pathParts(p){ return p.split("/").filter(Boolean); }
 function normalizePath(p){
@@ -109,11 +117,9 @@ function loadCurrentProject(){
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY_CURRENT)||"null"); } catch { return null; }
 }
 
-/* ------------- BUILD TREE (SADELENMİŞ) -------------
-   Mantık:
-   - .dct_folder => sadece klasör var demek (dosya node oluşturma)
-   - Diğerleri => dosya
-   - Tüm parent klasörler (dosyaların) otomatik oluşturulur
+/* ---------------- BUILD TREE ----------------
+   .dct_folder => klasör varlığını temsil eder.
+   Diğer dosyalar normal şekilde eklenir.
 */
 function buildTree(filesMap){
   const root = { type:"folder", name:"/", children:{} };
@@ -122,12 +128,11 @@ function buildTree(filesMap){
     const parts = pathParts(folderPath);
     let cur = root;
     let acc = [];
-    for(let part of parts){
+    for(const part of parts){
       acc.push(part);
       if(!cur.children[part]){
         cur.children[part] = { type:"folder", name:part, children:{}, path:acc.join("/") };
       } else if(cur.children[part].type === "file"){
-        // yanlışlıkla file olmuşsa dönüştür
         cur.children[part] = { type:"folder", name:part, children:{}, path:acc.join("/") };
       }
       cur = cur.children[part];
@@ -135,21 +140,19 @@ function buildTree(filesMap){
     return cur;
   }
 
-  // 1) Sentinel klasörleri ekle
+  // Sentineller
   Object.keys(filesMap).forEach(fp=>{
     if(fp.endsWith(".dct_folder")){
       const folderPath = fp.replace(/\/\.dct_folder$/,"").replace(/\/$/,"");
       if(folderPath) ensureFolder(folderPath);
     }
   });
-
-  // 2) Dosyalar
+  // Dosyalar
   Object.keys(filesMap).forEach(fp=>{
     if(fp.endsWith(".dct_folder")) return;
     const parts = pathParts(fp);
     if(parts.length>1){
       const parentPath = parts.slice(0,-1).join("/");
-      ensureFolder(parentPath);
       const parent = ensureFolder(parentPath);
       const fname = parts[parts.length-1];
       if(!parent.children[fname]){
@@ -166,7 +169,7 @@ function buildTree(filesMap){
   return root;
 }
 
-/* ------------- RENDERING ------------- */
+/* ---------------- RENDERING ---------------- */
 function renderFileTree(){
   ensureProject();
   fileTreeRoot = buildTree(project.files);
@@ -200,8 +203,6 @@ function renderNode(node){
     const childrenWrap = document.createElement("div");
     childrenWrap.className="children";
     Object.values(node.children).forEach(ch=> childrenWrap.appendChild(renderNode(ch)));
-
-    // expanded class
     if(expandedFolders.has(node.path)){
       item.classList.add("expanded");
     }
@@ -213,7 +214,6 @@ function renderNode(node){
         else expandedFolders.delete(node.path);
       }
     });
-
     li.appendChild(childrenWrap);
   } else {
     item.addEventListener("click", ()=> openFile(node.path));
@@ -305,7 +305,7 @@ function fullRender(){
   renderEditor();
 }
 
-/* ------------- FILE OPS ------------- */
+/* ---------------- FILE OPS ---------------- */
 function revealParents(path){
   const parts = pathParts(path);
   for(let i=1;i<parts.length;i++){
@@ -313,20 +313,26 @@ function revealParents(path){
   }
 }
 
-function openFile(path){
+/* openFile (retry mekanizmalı) */
+function openFile(path, attempt = 0) {
   ensureProject();
   path = normalizePath(path);
-  if(!project.files[path]){
-    dbg("openFile: dosya bulunamadı", path);
+  const exists = Object.prototype.hasOwnProperty.call(project.files, path);
+  if (!exists) {
+    dbg("openFile: dosya bulunamadı", { path, attempt });
+    if (attempt < 2) {
+      setTimeout(() => openFile(path, attempt + 1), 50);
+    }
     return;
   }
-  if(!project.openFiles.includes(path)) project.openFiles.push(path);
+  if (!project.openFiles.includes(path)) project.openFiles.push(path);
   project.activeFile = path;
   revealParents(path);
   saveCurrentProject();
   renderTabs();
   refreshActiveInTree();
   renderEditor();
+  dbg("openFile: AÇILDI", path);
 }
 
 function closeTab(path){
@@ -341,6 +347,7 @@ function closeTab(path){
   refreshActiveInTree();
 }
 
+/* createFile (önce file ekle + ağaç çiz, sonra openFile) */
 function createFile(path, content=""){
   path = normalizePath(path);
   if(!path){ alert("Geçersiz dosya adı"); return; }
@@ -348,8 +355,9 @@ function createFile(path, content=""){
   project.files[path] = content;
   revealParents(path);
   saveCurrentProject();
-  openFile(path);     // editor aç
-  renderFileTree();   // ağaçta göster
+  renderFileTree();
+  openFile(path);
+  dbg("createFile: eklendi ve açılmak istendi", path);
 }
 
 function createFolder(path){
@@ -367,7 +375,7 @@ function createFolder(path){
 function renamePath(oldPath,newPath){
   oldPath = normalizePath(oldPath);
   newPath = normalizePath(newPath);
-  if(project.files[newPath]){ alert("Yeni ad mevcut"); return; }
+  if(project.files[newPath]){ alert("Yeni ad mevcut."); return; }
   const content = project.files[oldPath];
   project.files[newPath]=content;
   delete project.files[oldPath];
@@ -398,7 +406,7 @@ function deletePath(path){
   // klasör
   const prefix = path.replace(/\/?$/,"/");
   const keys = Object.keys(project.files).filter(k=>k.startsWith(prefix));
-  if(keys.length===0){ dbg("Silinecek klasör bulunamadı", path); return; }
+  if(keys.length===0){ dbg("Silinecek klasör yok", path); return; }
   if(!confirm("Klasör silinsin mi?\n"+path)) return;
   keys.forEach(k=>{
     delete project.files[k];
@@ -414,7 +422,7 @@ function deletePath(path){
   fullRender();
 }
 
-/* ------------- NEW PROJECT ------------- */
+/* ---------------- NEW PROJECT ---------------- */
 function newProject(){
   if(dirtyFiles.size>0 && !confirm("Kaydedilmemiş değişiklikler var. Yeni proje?")) return;
   const name = prompt("Yeni proje adı:","Yeni Proje") || "Yeni Proje";
@@ -426,7 +434,7 @@ function newProject(){
   logClone("Yeni proje oluşturuldu.");
 }
 
-/* ------------- SLOTS (aynı) ------------- */
+/* ---------------- SLOTS ---------------- */
 function loadSlots(){
   let raw = localStorage.getItem(STORAGE_KEY_SLOTS);
   if(!raw){
@@ -491,7 +499,7 @@ function clearSlot(i){
   logClone(`Slot ${i+1} temizlendi.`);
 }
 
-/* ------------- EDITOR ------------- */
+/* ---------------- EDITOR ---------------- */
 els.editor.addEventListener("input",()=>{
   if(suppressEditor) return;
   if(!project.activeFile) return;
@@ -513,7 +521,7 @@ function markDirtyUI(path){
   }
 }
 
-/* ------------- KISAYOLLAR ------------- */
+/* ---------------- SHORTCUTS ---------------- */
 document.addEventListener("keydown",e=>{
   if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==="s"){ e.preventDefault(); saveAll(); }
   if((e.ctrlKey||e.metaKey) && e.shiftKey && e.key.toLowerCase()==="n"){ e.preventDefault(); newProject(); }
@@ -529,14 +537,14 @@ function saveAll(){
   logClone("Değişiklikler kaydedildi.");
 }
 
-/* ------------- PROJECT NAME ------------- */
+/* ---------------- PROJECT NAME ---------------- */
 els.projectName.addEventListener("change",()=>{
   project.name = els.projectName.value.trim() || "Adsiz Proje";
   saveCurrentProject();
   renderProjectName();
 });
 
-/* ------------- CONTEXT MENUS ------------- */
+/* ---------------- CONTEXT MENUS ---------------- */
 let contextTarget=null;
 document.addEventListener("click",()=>hideAllMenus());
 function showContextMenu(type,x,y,target){
@@ -592,12 +600,12 @@ els.menus.tab.addEventListener("click",(e)=>{
     project.activeFile = path;
     saveCurrentProject(); renderTabs(); renderEditor();
   } else if(action==="close-all"){
-    project.openFiles = []; project.activeFile = null;
+    project.openFiles = []; project.activeFile=null;
     saveCurrentProject(); renderTabs(); renderEditor();
   }
 });
 
-/* ------------- LOG ------------- */
+/* ---------------- LOG ---------------- */
 function logClone(msg){
   const div = document.createElement("div");
   div.textContent=msg;
@@ -605,7 +613,7 @@ function logClone(msg){
   els.cloneProgress.scrollTop = els.cloneProgress.scrollHeight;
 }
 
-/* ------------- GITHUB CLONE (aynı mantık) ------------- */
+/* ---------------- GITHUB CLONE ---------------- */
 if(els.cloneBtn){
   els.cloneBtn.addEventListener("click", async ()=>{
     const url = els.githubUrl.value.trim();
@@ -679,7 +687,7 @@ async function fetchJSON(url,opt={}){
   return await res.json();
 }
 
-/* ------------- PAT / AUTH / LIST / BRANCH / PUSH (DEĞİŞMEDİ) ------------- */
+/* ---------------- PAT / AUTH ---------------- */
 function loadPAT(){ return localStorage.getItem(PAT_STORAGE_KEY)||""; }
 function savePAT(token){
   localStorage.setItem(PAT_STORAGE_KEY, token);
@@ -734,6 +742,8 @@ async function githubAPIFetch(path,options={}){
   if(res.status===204) return {};
   return await res.json();
 }
+
+/* ---------------- REPO LIST ---------------- */
 async function listRepos(){
   if(!loadPAT()){ alert("PAT gir."); return; }
   logClone("Repo listesi alınıyor...");
@@ -753,6 +763,8 @@ async function listRepos(){
     logClone("Repo listesi hatası: "+e.message);
   }
 }
+
+/* ---------------- BRANCH OPS ---------------- */
 async function checkBranch(){
   const repo=els.repoSelect.value;
   const branch=els.branchInput.value.trim();
@@ -772,7 +784,7 @@ async function createBranch(){
   if(!repo||!branch){ alert("Repo ve branch gir."); return; }
   try{
     const baseRef = await tryFindDefaultBaseRef(repo);
-    await githubAPIFetch(`/repos/${repo}/git/refs`,{
+    await githubAPIFetch(`/repos/${repo}/git/refs`, {
       method:"POST",
       body: JSON.stringify({ ref:`refs/heads/${branch}`, sha:baseRef.object.sha })
     });
@@ -788,6 +800,8 @@ async function tryFindDefaultBaseRef(repo){
   const info = await githubAPIFetch(`/repos/${repo}`);
   return await githubAPIFetch(`/repos/${repo}/git/ref/heads/${info.default_branch}`);
 }
+
+/* ---------------- PUSH ---------------- */
 async function pushProject(){
   if(!githubUser){ alert("Önce PAT doğrula."); return; }
   const repo=els.repoSelect.value;
@@ -840,7 +854,7 @@ async function pushProject(){
   }
 }
 
-/* ------------- ZIP EXPORT ------------- */
+/* ---------------- ZIP EXPORT ---------------- */
 function exportProjectZip(){
   ensureProject();
   const files = Object.entries(project.files).filter(([p])=>!p.endsWith(".dct_folder"));
@@ -934,7 +948,7 @@ function buildZip(fileEntries){
   return new Blob([...fileDataParts,...centralDirParts,end], {type:"application/zip"});
 }
 
-/* ------------- THEME ------------- */
+/* ---------------- THEME ---------------- */
 function loadTheme(){ return localStorage.getItem(THEME_STORAGE_KEY)||"dark"; }
 function saveTheme(theme){ localStorage.setItem(THEME_STORAGE_KEY, theme); }
 function applyTheme(theme){
@@ -948,7 +962,7 @@ function toggleTheme(){
   logClone("Tema: "+next);
 }
 
-/* ------------- PANELS ------------- */
+/* ---------------- PANELS ---------------- */
 els.activityItems.forEach(item=>{
   item.addEventListener("click",()=>{
     els.activityItems.forEach(i=>i.classList.remove("active"));
@@ -959,12 +973,14 @@ els.activityItems.forEach(item=>{
   });
 });
 
-/* ------------- LOGGED HELPERS to GLOBAL ------------- */
+/* ---------------- LOG TO GLOBAL HELPERS ---------------- */
 window.DCT_DEBUG_ON = ()=>{ DCT_DEBUG=true; console.log("DCT DEBUG ON"); };
 window.DCT_DEBUG_OFF = ()=>{ DCT_DEBUG=false; console.log("DCT DEBUG OFF"); };
 window.DCT_DUMP = ()=>console.log("project.files", project.files);
+window.debugOpen = (p)=>openFile(p);
+window.debugCreate = (p)=>createFile(p);
 
-/* ------------- INIT ------------- */
+/* ---------------- INIT ---------------- */
 function init(){
   project = loadCurrentProject() || createEmptyProject("DCT Project");
   applyTheme(loadTheme());
@@ -987,11 +1003,11 @@ function init(){
   const existingPat = loadPAT();
   if(existingPat) els.patInput.value = existingPat;
 
-  if(els.savePatBtn) els.savePatBtn.addEventListener("click",()=>{
+  if(els.savePatBtn) els.savePatBtn.addEventListener("click", ()=>{
     const t=els.patInput.value.trim(); if(!t){ alert("Token gir."); return; }
     savePAT(t);
   });
-  if(els.clearPatBtn) els.clearPatBtn.addEventListener("click",()=>{
+  if(els.clearPatBtn) els.clearPatBtn.addEventListener("click", ()=>{
     if(confirm("Token silinsin mi?")) clearPAT();
   });
   if(els.validatePatBtn) els.validatePatBtn.addEventListener("click", validatePAT);
@@ -1008,3 +1024,9 @@ function init(){
   });
 }
 init();
+
+/* ---------------- CSS NOTU ----------------
+style.css içinde (yoksa ekleyin):
+.tree-item.folder + .children { display:none; }
+.tree-item.folder.expanded + .children { display:block; }
+------------------------------------------------ */
