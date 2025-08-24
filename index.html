@@ -28,6 +28,7 @@
             <button id="btn-new-project" title="Yeni Proje (Ctrl+Shift+N)">+P</button>
             <button id="btn-new-file" title="Yeni Dosya">+F</button>
             <button id="btn-new-folder" title="Yeni Klasör">+D</button>
+            <button id="btn-export-zip" title="Projeyi ZIP indir">ZIP</button>
           </div>
         </div>
         <div id="project-name-wrapper">
@@ -50,62 +51,62 @@
         <div class="panel-header"><span>GITHUB CLONE & PUSH</span></div>
         <div class="github-section">
           <!-- AUTH BOX -->
-            <div class="github-auth-box" id="github-auth-box">
-              <strong>GitHub PAT (Personal Access Token)</strong>
-              <div class="github-small-note">
-                Yalnızca tarayıcıda saklanır. <a href="https://github.com/settings/tokens" target="_blank">PAT oluştur</a>
-              </div>
-              <input id="github-pat-input" placeholder="ghp_..." autocomplete="off" />
-              <div class="github-auth-actions">
-                <button id="btn-save-pat">Token Kaydet</button>
-                <button id="btn-validate-pat">Doğrula</button>
-                <button id="btn-clear-pat">Sil / Çıkış</button>
-                <button id="btn-list-repos">Repo Getir</button>
-              </div>
-              <div id="github-user-info" class="github-user" style="display:none;">
-                <img id="github-user-avatar" src="" alt="avatar" />
-                <div>
-                  <div><span id="github-user-login"></span><span class="github-badge">AUTH</span></div>
-                  <div id="github-user-name" style="font-size:11px; opacity:.8;"></div>
-                </div>
-              </div>
-              <div class="github-warning">
-                Güvenlik: XSS açığı tokenınızı çalabilir. İşiniz bitince siliniz.
+          <div class="github-auth-box" id="github-auth-box">
+            <strong>GitHub PAT (Personal Access Token)</strong>
+            <div class="github-small-note">
+              Yalnızca tarayıcıda saklanır. <a href="https://github.com/settings/tokens" target="_blank">PAT oluştur</a>
+            </div>
+            <input id="github-pat-input" placeholder="ghp_..." autocomplete="off" />
+            <div class="github-auth-actions">
+              <button id="btn-save-pat">Token Kaydet</button>
+              <button id="btn-validate-pat">Doğrula</button>
+              <button id="btn-clear-pat">Sil / Çıkış</button>
+              <button id="btn-list-repos">Repo Getir</button>
+            </div>
+            <div id="github-user-info" class="github-user" style="display:none;">
+              <img id="github-user-avatar" src="" alt="avatar" />
+              <div>
+                <div><span id="github-user-login"></span><span class="github-badge">AUTH</span></div>
+                <div id="github-user-name" style="font-size:11px; opacity:.8;"></div>
               </div>
             </div>
-
-            <!-- CLONE (ÖNCEKİ) -->
-            <label>Repo URL:
-              <input id="github-url" placeholder="https://github.com/kullanici/repo veya .../tree/branch" />
-            </label>
-            <button id="btn-clone">Clone</button>
-
-            <div class="github-divider"></div>
-
-            <!-- PUSH BOX -->
-            <div class="github-push-box">
-              <strong>Push (Tek Commit)</strong>
-              <div class="github-small-note">
-                Aşağıda token doğrulandıysa repos listelenir.
-              </div>
-              <select id="github-repo-select">
-                <option value="">-- Repo Seç --</option>
-              </select>
-              <div class="github-inline">
-                <input id="github-branch-input" placeholder="Branch (örn: main)" />
-                <input id="github-prefix-input" placeholder="Alt Klasör (opsiyonel)" />
-              </div>
-              <input id="github-commit-message" placeholder="Commit mesajı" />
-              <div class="github-push-actions">
-                <button id="btn-check-branch">Branch Kontrol</button>
-                <button id="btn-create-branch">Branch Oluştur</button>
-                <button id="btn-push-project">Push Proje</button>
-              </div>
+            <div class="github-warning">
+              Güvenlik: XSS açığı tokenınızı çalabilir. İşiniz bitince siliniz.
             </div>
+          </div>
 
-            <div class="github-divider"></div>
-            <div class="github-log-section-title">LOG</div>
-            <div id="clone-progress"></div>
+          <!-- CLONE -->
+          <label>Repo URL:
+            <input id="github-url" placeholder="https://github.com/kullanici/repo veya .../tree/branch" />
+          </label>
+          <button id="btn-clone">Clone</button>
+
+          <div class="github-divider"></div>
+
+          <!-- PUSH BOX -->
+          <div class="github-push-box">
+            <strong>Push (Tek Commit)</strong>
+            <div class="github-small-note">
+              Aşağıda token doğrulandıysa repos listelenir.
+            </div>
+            <select id="github-repo-select">
+              <option value="">-- Repo Seç --</option>
+            </select>
+            <div class="github-inline">
+              <input id="github-branch-input" placeholder="Branch (örn: main)" />
+              <input id="github-prefix-input" placeholder="Alt Klasör (opsiyonel)" />
+            </div>
+            <input id="github-commit-message" placeholder="Commit mesajı" />
+            <div class="github-push-actions">
+              <button id="btn-check-branch">Branch Kontrol</button>
+              <button id="btn-create-branch">Branch Oluştur</button>
+              <button id="btn-push-project">Push Proje</button>
+            </div>
+          </div>
+
+          <div class="github-divider"></div>
+          <div class="github-log-section-title">LOG</div>
+          <div id="clone-progress"></div>
         </div>
       </div>
 
@@ -120,6 +121,7 @@
             <li>GitHub public repo clone</li>
             <li>Light / Dark Tema</li>
             <li>GitHub PAT ile push</li>
+            <li>ZIP Export</li>
           </ul>
           <p>Geliştirmeye açık: syntax highlight, terminal entegrasyonu vb.</p>
         </div>
