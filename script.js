@@ -1,8 +1,13 @@
-/* ÖNEMLİ NOT:
-   Bu dosya önceki sürümünüzün üzerine yazılırsa tema, yeni proje, clone, push, slot gibi tüm özellikler burada birleşmiş haldedir.
-   Eğer sizde zaten güncellenmiş bir script.js varsa diff alarak entegre edin.
+/* DCT Code - Güncellenmiş script.js
+   Eklenen / Düzenlenen Özellikler:
+   - ZIP Export (sentinel .dct_folder hariç tüm proje dosyalarını indir)
+   - Klasör açılmama sorunu: yeni klasör ve içine dosya oluşturulduğunda otomatik expand
+   - Açık klasör durumlarının korunması (expandedFolders)
+   - buildTree içinde .dct_folder sentinel dosyaları ağaçta gizleme
+   - Dosya / klasör açıldığında üst klasör zincirinin otomatik expand edilmesi
 */
 
+/* ---------------- CONSTANTS ---------------- */
 const STORAGE_KEY_CURRENT = "dctcode_current_project";
 const STORAGE_KEY_SLOTS = "dctcode_slots";
 const MAX_SLOTS = 5;
@@ -10,13 +15,15 @@ const THEME_STORAGE_KEY = "dctcode_theme";
 const PAT_STORAGE_KEY = "dctcode_pat";
 const GITHUB_API_BASE = "https://api.github.com";
 
-// State
+/* ---------------- STATE ---------------- */
 let project = null;
 let fileTreeRoot = {};
 let dirtyFiles = new Set();
 let suppressEditor = false;
 let githubUser = null; // Doğrulanmış kullanıcı objesi
+const expandedFolders = new Set(); // Açık klasör path’leri
 
+/* ---------------- ELEMENTS ---------------- */
 const els = {
   activityItems: document.querySelectorAll(".activity-item"),
   panels: {
@@ -35,17 +42,15 @@ const els = {
     changed: document.getElementById("status-changed")
   },
   slotsList: document.getElementById("slots-list"),
-  // GitHub Clone + Push
   githubUrl: document.getElementById("github-url"),
   cloneBtn: document.getElementById("btn-clone"),
   cloneProgress: document.getElementById("clone-progress"),
 
-  // Explorer actions
   newFileBtn: document.getElementById("btn-new-file"),
   newFolderBtn: document.getElementById("btn-new-folder"),
   newProjectBtn: document.getElementById("btn-new-project"),
+  exportZipBtn: document.getElementById("btn-export-zip"), // (index.html’de ZIP butonu varsa)
 
-  // Theme
   themeToggle: document.getElementById("btn-theme-toggle"),
 
   // PAT / Auth
@@ -106,23 +111,19 @@ function loadSlots() {
   }
   try { return JSON.parse(raw); } catch { return new Array(MAX_SLOTS).fill(null); }
 }
-
 function saveSlots(slots) {
   localStorage.setItem(STORAGE_KEY_SLOTS, JSON.stringify(slots));
 }
-
 function saveCurrentProject() {
   if (!project) return;
   project.updated = nowISO();
   localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(project));
 }
-
 function loadCurrentProject() {
   const raw = localStorage.getItem(STORAGE_KEY_CURRENT);
   if (!raw) return null;
   try { return JSON.parse(raw); } catch { return null; }
 }
-
 function createEmptyProject(name = "Yeni Proje") {
   return {
     name,
@@ -133,31 +134,42 @@ function createEmptyProject(name = "Yeni Proje") {
     updated: nowISO()
   };
 }
-
 function ensureProject() {
   if (!project) {
     project = createEmptyProject("DCT Project");
     saveCurrentProject();
   }
 }
-
 function pathParts(p) { return p.split("/").filter(Boolean); }
 
+/* Üst klasörleri expandedFolders’a ekle */
+function revealParents(path) {
+  const parts = pathParts(path);
+  for (let i = 1; i < parts.length; i++) {
+    const folderPath = parts.slice(0, i).join("/");
+    expandedFolders.add(folderPath);
+  }
+}
+
+/* ---------------- BUILD TREE (sentinel gizle) ---------------- */
 function buildTree(filesMap) {
   const root = { type:"folder", name:"/", children:{} };
-  Object.keys(filesMap).sort().forEach(fp => {
-    const parts = pathParts(fp);
-    let cur = root;
-    parts.forEach((part,i) => {
-      const isLast = i === parts.length -1;
-      if (!cur.children[part]) {
-        cur.children[part] = isLast
-          ? { type:"file", name:part, path: parts.slice(0,i+1).join("/") }
-          : { type:"folder", name:part, children:{}, path: parts.slice(0,i+1).join("/") };
-      }
-      cur = cur.children[part];
+  Object.keys(filesMap)
+    .sort()
+    .forEach(fp => {
+      if (fp.endsWith(".dct_folder")) return; // sentinel gösterme
+      const parts = pathParts(fp);
+      let cur = root;
+      parts.forEach((part,i) => {
+        const isLast = i === parts.length -1;
+        if (!cur.children[part]) {
+          cur.children[part] = isLast
+            ? { type:"file", name:part, path: parts.slice(0,i+1).join("/") }
+            : { type:"folder", name:part, children:{}, path: parts.slice(0,i+1).join("/") };
+        }
+        cur = cur.children[part];
+      });
     });
-  });
   return root;
 }
 
@@ -199,10 +211,20 @@ function renderNode(node) {
     childrenWrap.className = "children";
     Object.values(node.children).forEach(child => childrenWrap.appendChild(renderNode(child)));
     li.appendChild(childrenWrap);
+
+    // Açık klasörleri koru
+    if (expandedFolders.has(node.path)) {
+      item.classList.add("expanded");
+      twisty.textContent = "▾";
+      childrenWrap.style.display = "block";
+    }
+
     item.addEventListener("click", e => {
       if (e.detail === 1) {
         const expanded = item.classList.toggle("expanded");
         twisty.textContent = expanded ? "▾" : "▸";
+        if (expanded) expandedFolders.add(node.path);
+        else expandedFolders.delete(node.path);
       }
     });
   } else {
@@ -221,6 +243,7 @@ function renderNode(node) {
 
 function refreshActiveInTree() {
   document.querySelectorAll(".tree-item.file.active").forEach(el => el.classList.remove("active"));
+  if (!project.activeFile) return;
   const activeEl = document.querySelector(`.tree-item.file[data-path="${CSS.escape(project.activeFile)}"]`);
   if (activeEl) activeEl.classList.add("active");
 }
@@ -280,12 +303,10 @@ function updateStatusChanged() {
     els.status.changed.classList.add("dirty");
   }
 }
-
 function renderProjectName() {
   els.projectName.value = project.name;
   els.status.project.textContent = project.name;
 }
-
 function fullRender() {
   renderProjectName();
   renderFileTree();
@@ -299,9 +320,11 @@ function openFile(path) {
   if (!project.files[path]) return;
   if (!project.openFiles.includes(path)) project.openFiles.push(path);
   project.activeFile = path;
+  revealParents(path); // Üst klasörleri açık tut
   saveCurrentProject();
   renderTabs();
   refreshActiveInTree();
+  renderFileTree(); // Açılma etkisini görmek için yeniden çiz
   renderEditor();
 }
 
@@ -319,6 +342,7 @@ function createFile(path, content = "") {
   if (project.files[path]) { alert("Bu isimde dosya zaten var."); return; }
   project.files[path] = content;
   project.updated = nowISO();
+  revealParents(path); // Klasörlerin açılmasını sağla
   saveCurrentProject();
   openFile(path);
   renderFileTree();
@@ -328,6 +352,9 @@ function createFolder(path) {
   const marker = path.replace(/\/?$/,"/") + ".dct_folder";
   if (project.files[marker]) { alert("Klasör zaten var."); return; }
   project.files[marker] = "";
+  // Yeni klasörü otomatik expand et
+  expandedFolders.add(path);
+  revealParents(path + "/_temp"); // Üst klasörleri de aç
   saveCurrentProject();
   renderFileTree();
 }
@@ -341,12 +368,14 @@ function renamePath(oldPath, newPath) {
   if (oi >= 0) project.openFiles[oi] = newPath;
   if (project.activeFile === oldPath) project.activeFile = newPath;
   if (dirtyFiles.has(oldPath)) { dirtyFiles.delete(oldPath); dirtyFiles.add(newPath); }
+  revealParents(newPath);
   saveCurrentProject();
-  renderFileTree(); renderTabs(); refreshActiveInTree(); renderEditor();
+  fullRender();
 }
 
 function deletePath(path) {
   if (!project.files[path]) {
+    // Folder (prefix)
     const prefix = path.replace(/\/?$/,"/");
     const keys = Object.keys(project.files).filter(k => k.startsWith(prefix));
     if (keys.length === 0) return;
@@ -360,6 +389,7 @@ function deletePath(path) {
     if (project.activeFile && !project.files[project.activeFile]) {
       project.activeFile = project.openFiles[project.openFiles.length -1] || null;
     }
+    expandedFolders.delete(path);
     saveCurrentProject();
     fullRender();
     return;
@@ -385,6 +415,7 @@ function newProject() {
   const name = prompt("Yeni proje adı:", "Yeni Proje") || "Yeni Proje";
   project = createEmptyProject(name);
   dirtyFiles.clear();
+  expandedFolders.clear();
   saveCurrentProject();
   fullRender();
   logClone("Yeni proje oluşturuldu.");
@@ -422,7 +453,6 @@ function renderSlots() {
     els.slotsList.appendChild(div);
   });
 }
-
 function saveToSlot(index) {
   if (!project) return;
   const slots = loadSlots();
@@ -438,6 +468,7 @@ function loadFromSlot(index) {
   if (dirtyFiles.size > 0 && !confirm("Kaydedilmemiş değişiklikler var. Yine de yüklemek?")) return;
   project = JSON.parse(JSON.stringify(slot));
   dirtyFiles.clear();
+  expandedFolders.clear();
   saveCurrentProject();
   fullRender();
   logClone(`Slot ${index+1} yüklendi.`);
@@ -585,7 +616,7 @@ function logClone(msg) {
   els.cloneProgress.scrollTop = els.cloneProgress.scrollHeight;
 }
 
-/* ---------------- GITHUB CLONE (MEVCUT) ---------------- */
+/* ---------------- GITHUB CLONE ---------------- */
 els.cloneBtn.addEventListener("click", async () => {
   const url = els.githubUrl.value.trim();
   if (!url) { alert("URL girin"); return; }
@@ -617,6 +648,7 @@ els.cloneBtn.addEventListener("click", async () => {
       created: nowISO(),
       updated: nowISO()
     };
+    expandedFolders.clear();
     if (newFiles["README.md"]) openFile("README.md");
     else if (blobs.length > 0) openFile(blobs[0].path);
     dirtyFiles.clear();
@@ -663,9 +695,7 @@ async function fetchJSON(url, opt = {}) {
 }
 
 /* ---------------- GITHUB PAT / AUTH ---------------- */
-function loadPAT() {
-  return localStorage.getItem(PAT_STORAGE_KEY) || "";
-}
+function loadPAT() { return localStorage.getItem(PAT_STORAGE_KEY) || ""; }
 function savePAT(token) {
   localStorage.setItem(PAT_STORAGE_KEY, token);
   els.patInput.value = token;
@@ -678,7 +708,6 @@ function clearPAT() {
   hideUserInfo();
   logClone("PAT silindi.");
 }
-
 function showUserInfo() {
   if (!githubUser) return;
   els.userInfoBox.style.display = "flex";
@@ -691,7 +720,6 @@ function hideUserInfo() {
   els.userInfoBox.style.display = "none";
   els.authBox.classList.remove("authenticated");
 }
-
 async function validatePAT() {
   const token = loadPAT();
   if (!token) { alert("Önce PAT girin ve kaydedin."); return; }
@@ -706,7 +734,6 @@ async function validatePAT() {
     alert("Token geçersiz olabilir.");
   }
 }
-
 async function githubAPIFetch(path, options = {}) {
   const token = loadPAT();
   if (!token) throw new Error("PAT yok.");
@@ -730,7 +757,6 @@ async function listRepos() {
   logClone("Repo listesi çekiliyor...");
   els.repoSelect.innerHTML = `<option value="">(yükleniyor...)</option>`;
   try {
-    // Kullanıcıya ait repos (ilk 100)
     const repos = await githubAPIFetch(`/user/repos?per_page=100&sort=updated`);
     repos.sort((a,b) => a.full_name.localeCompare(b.full_name));
     els.repoSelect.innerHTML = `<option value="">-- Repo Seç --</option>`;
@@ -761,12 +787,10 @@ async function checkBranch() {
     return false;
   }
 }
-
 async function createBranch() {
   const repo = els.repoSelect.value;
   const branch = els.branchInput.value.trim();
   if (!repo || !branch) { alert("Repo ve branch girin."); return; }
-  // main veya master referans alınmaya çalışılır
   try {
     const baseRef = await tryFindDefaultBaseRef(repo);
     logClone(`Yeni branch '${branch}' base: ${baseRef.object.sha}`);
@@ -782,16 +806,13 @@ async function createBranch() {
     logClone("Branch oluşturma hatası: " + e.message);
   }
 }
-
 async function tryFindDefaultBaseRef(repo) {
-  // Sırayla main/master dene
   const candidates = ["main","master"];
   for (const c of candidates) {
     try {
       return await githubAPIFetch(`/repos/${repo}/git/ref/heads/${c}`);
     } catch {}
   }
-  // HEAD fallback
   const repoInfo = await githubAPIFetch(`/repos/${repo}`);
   const def = repoInfo.default_branch;
   return await githubAPIFetch(`/repos/${repo}/git/ref/heads/${def}`);
@@ -806,7 +827,6 @@ async function pushProject() {
   const message = els.commitMsgInput.value.trim() || "DCT Code commit";
   if (!repo) { alert("Repo seç."); return; }
 
-  // Branch var mı?
   const exists = await checkBranch();
   if (!exists) {
     const create = confirm("Branch yok. Oluşturulsun mu?");
@@ -816,17 +836,14 @@ async function pushProject() {
 
   try {
     logClone("Push başlıyor...");
-    // 1) Ref al
     const ref = await githubAPIFetch(`/repos/${repo}/git/ref/heads/${encodeURIComponent(branch)}`);
     const baseCommitSha = ref.object.sha;
     logClone("Base commit: " + baseCommitSha);
 
-    // 2) Base commit → tree sha
     const baseCommit = await githubAPIFetch(`/repos/${repo}/git/commits/${baseCommitSha}`);
     const baseTreeSha = baseCommit.tree.sha;
     logClone("Base tree: " + baseTreeSha);
 
-    // 3) Dosyalardan blob oluştur
     const fileEntries = Object.entries(project.files)
       .filter(([p]) => !p.endsWith(".dct_folder"));
     logClone(`Dosya sayısı (blob üretilecek): ${fileEntries.length}`);
@@ -839,7 +856,7 @@ async function pushProject() {
         method: "POST",
         body: JSON.stringify({
           content,
-            encoding: "utf-8"
+          encoding: "utf-8"
         })
       });
       treeItems.push({
@@ -852,7 +869,6 @@ async function pushProject() {
       if (done % 10 === 0) logClone(`Blob oluşturuldu: ${done}/${fileEntries.length}`);
     }
 
-    // 4) Yeni tree
     const newTree = await githubAPIFetch(`/repos/${repo}/git/trees`, {
       method: "POST",
       body: JSON.stringify({
@@ -862,7 +878,6 @@ async function pushProject() {
     });
     logClone("Yeni tree: " + newTree.sha);
 
-    // 5) Yeni commit
     const newCommit = await githubAPIFetch(`/repos/${repo}/git/commits`, {
       method: "POST",
       body: JSON.stringify({
@@ -873,7 +888,6 @@ async function pushProject() {
     });
     logClone("Yeni commit: " + newCommit.sha);
 
-    // 6) Ref güncelle
     await githubAPIFetch(`/repos/${repo}/git/refs/heads/${encodeURIComponent(branch)}`, {
       method: "PATCH",
       body: JSON.stringify({ sha: newCommit.sha })
@@ -886,6 +900,122 @@ async function pushProject() {
   }
 }
 
+/* ---------------- ZIP EXPORT ---------------- */
+function exportProjectZip() {
+  ensureProject();
+  const files = Object.entries(project.files).filter(([p]) => !p.endsWith(".dct_folder"));
+  if (files.length === 0) {
+    alert("İndirilecek dosya yok.");
+    return;
+  }
+  const blob = buildZip(files);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (project.name || "project") + ".zip";
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  }, 1500);
+  logClone("ZIP export oluşturuldu: " + a.download);
+}
+
+/* Basit (STORE) ZIP oluşturucu */
+function buildZip(fileEntries) {
+  const encoder = new TextEncoder();
+  const fileDataParts = [];
+  const centralDirParts = [];
+  let offset = 0;
+  const entriesMeta = [];
+
+  function crc32(buf) {
+    let table = crc32.table;
+    if (!table) {
+      table = crc32.table = [];
+      for (let i = 0; i < 256; i++) {
+        let c = i;
+        for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+        table[i] = c >>> 0;
+      }
+    }
+    let crc = 0 ^ (-1);
+    for (let i = 0; i < buf.length; i++)
+      crc = (crc >>> 8) ^ table[(crc ^ buf[i]) & 0xFF];
+    return (crc ^ (-1)) >>> 0;
+  }
+
+  for (const [path, content] of fileEntries) {
+    const nameBytes = encoder.encode(path);
+    const dataBytes = encoder.encode(content);
+    const crc = crc32(dataBytes);
+    const size = dataBytes.length;
+
+    // Local File Header
+    const local = new DataView(new ArrayBuffer(30));
+    let p = 0;
+    local.setUint32(p, 0x04034b50, true); p += 4;
+    local.setUint16(p, 10, true); p += 2; // version needed
+    local.setUint16(p, 0, true); p += 2;  // flags
+    local.setUint16(p, 0, true); p += 2;  // compression (0 store)
+    local.setUint16(p, 0, true); p += 2;  // mod time
+    local.setUint16(p, 0, true); p += 2;  // mod date
+    local.setUint32(p, crc, true); p += 4;
+    local.setUint32(p, size, true); p += 4;
+    local.setUint32(p, size, true); p += 4;
+    local.setUint16(p, nameBytes.length, true); p += 2;
+    local.setUint16(p, 0, true); p += 2; // extra len
+
+    fileDataParts.push(local, nameBytes, dataBytes);
+
+    entriesMeta.push({
+      nameBytes,
+      crc,
+      size,
+      offset
+    });
+    offset += 30 + nameBytes.length + size;
+  }
+
+  let centralDirSize = 0;
+  for (const meta of entriesMeta) {
+    const cdir = new DataView(new ArrayBuffer(46));
+    let p = 0;
+    cdir.setUint32(p, 0x02014b50, true); p += 4; // central dir sig
+    cdir.setUint16(p, 20, true); p += 2; // version made by
+    cdir.setUint16(p, 10, true); p += 2; // version needed
+    cdir.setUint16(p, 0, true); p += 2; // flags
+    cdir.setUint16(p, 0, true); p += 2; // compression
+    cdir.setUint16(p, 0, true); p += 2; // mod time
+    cdir.setUint16(p, 0, true); p += 2; // mod date
+    cdir.setUint32(p, meta.crc, true); p += 4;
+    cdir.setUint32(p, meta.size, true); p += 4;
+    cdir.setUint32(p, meta.size, true); p += 4;
+    cdir.setUint16(p, meta.nameBytes.length, true); p += 2;
+    cdir.setUint16(p, 0, true); p += 2; // extra
+    cdir.setUint16(p, 0, true); p += 2; // comment
+    cdir.setUint16(p, 0, true); p += 2; // disk number
+    cdir.setUint16(p, 0, true); p += 2; // internal attrs
+    cdir.setUint32(p, 0, true); p += 4; // external attrs
+    cdir.setUint32(p, meta.offset, true); p += 4;
+    centralDirParts.push(cdir, meta.nameBytes);
+    centralDirSize += 46 + meta.nameBytes.length;
+  }
+
+  const end = new DataView(new ArrayBuffer(22));
+  let q = 0;
+  end.setUint32(q, 0x06054b50, true); q += 4; // end sig
+  end.setUint16(q, 0, true); q += 2; // disk
+  end.setUint16(q, 0, true); q += 2; // disk start
+  end.setUint16(q, entriesMeta.length, true); q += 2;
+  end.setUint16(q, entriesMeta.length, true); q += 2;
+  end.setUint32(q, centralDirSize, true); q += 4;
+  end.setUint32(q, offset, true); q += 4;
+  end.setUint16(q, 0, true); q += 2; // comment length
+
+  return new Blob([...fileDataParts, ...centralDirParts, end], { type: "application/zip" });
+}
+
 /* ---------------- INIT ---------------- */
 function init() {
   project = loadCurrentProject() || createEmptyProject("DCT Project");
@@ -895,15 +1025,20 @@ function init() {
   renderSlots();
 
   // Explorer buttons
-  els.newFileBtn.addEventListener("click", () => {
-    const name = prompt("Dosya adı:"); if (!name) return;
-    createFile(name);
-  });
-  els.newFolderBtn.addEventListener("click", () => {
-    const name = prompt("Klasör adı:"); if (!name) return;
-    createFolder(name); renderFileTree();
-  });
-  els.newProjectBtn.addEventListener("click", newProject);
+  if (els.newFileBtn)
+    els.newFileBtn.addEventListener("click", () => {
+      const name = prompt("Dosya adı:"); if (!name) return;
+      createFile(name);
+    });
+  if (els.newFolderBtn)
+    els.newFolderBtn.addEventListener("click", () => {
+      const name = prompt("Klasör adı:"); if (!name) return;
+      createFolder(name); renderFileTree();
+    });
+  if (els.newProjectBtn)
+    els.newProjectBtn.addEventListener("click", newProject);
+  if (els.exportZipBtn)
+    els.exportZipBtn.addEventListener("click", exportProjectZip);
 
   if (els.themeToggle) els.themeToggle.addEventListener("click", toggleTheme);
 
@@ -911,19 +1046,26 @@ function init() {
   const existingPat = loadPAT();
   if (existingPat) els.patInput.value = existingPat;
 
-  els.savePatBtn.addEventListener("click", () => {
-    const t = els.patInput.value.trim();
-    if (!t) { alert("Token gir."); return; }
-    savePAT(t);
-  });
-  els.clearPatBtn.addEventListener("click", () => {
-    if (confirm("Token silinsin mi?")) clearPAT();
-  });
-  els.validatePatBtn.addEventListener("click", validatePAT);
-  els.listReposBtn.addEventListener("click", listRepos);
-  els.checkBranchBtn.addEventListener("click", checkBranch);
-  els.createBranchBtn.addEventListener("click", createBranch);
-  els.pushProjectBtn.addEventListener("click", pushProject);
+  if (els.savePatBtn)
+    els.savePatBtn.addEventListener("click", () => {
+      const t = els.patInput.value.trim();
+      if (!t) { alert("Token gir."); return; }
+      savePAT(t);
+    });
+  if (els.clearPatBtn)
+    els.clearPatBtn.addEventListener("click", () => {
+      if (confirm("Token silinsin mi?")) clearPAT();
+    });
+  if (els.validatePatBtn)
+    els.validatePatBtn.addEventListener("click", validatePAT);
+  if (els.listReposBtn)
+    els.listReposBtn.addEventListener("click", listRepos);
+  if (els.checkBranchBtn)
+    els.checkBranchBtn.addEventListener("click", checkBranch);
+  if (els.createBranchBtn)
+    els.createBranchBtn.addEventListener("click", createBranch);
+  if (els.pushProjectBtn)
+    els.pushProjectBtn.addEventListener("click", pushProject);
 
   window.addEventListener("beforeunload", (e) => {
     if (dirtyFiles.size > 0) {
