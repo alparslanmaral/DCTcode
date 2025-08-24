@@ -153,23 +153,39 @@ function revealParents(path) {
 
 /* ---------------- BUILD TREE (sentinel gizle) ---------------- */
 function buildTree(filesMap) {
-  const root = { type:"folder", name:"/", children:{} };
+  const root = { type: "folder", name: "/", children: {} };
+
   Object.keys(filesMap)
     .sort()
     .forEach(fp => {
-      if (fp.endsWith(".dct_folder")) return; // sentinel gösterme
+      const isSentinel = fp.endsWith(".dct_folder");
       const parts = pathParts(fp);
+      // Sentinel ise son parçayı (".dct_folder") ağaçta dosya olarak eklemeyeceğiz
+      const limit = isSentinel ? parts.length - 1 : parts.length;
+      if (limit <= 0) return; // güvenlik
+
       let cur = root;
-      parts.forEach((part,i) => {
-        const isLast = i === parts.length -1;
+      for (let i = 0; i < limit; i++) {
+        const part = parts[i];
+        const isLast = (i === limit - 1);
         if (!cur.children[part]) {
-          cur.children[part] = isLast
-            ? { type:"file", name:part, path: parts.slice(0,i+1).join("/") }
-            : { type:"folder", name:part, children:{}, path: parts.slice(0,i+1).join("/") };
+            cur.children[part] = isLast
+              ? { type: "file", name: part, path: parts.slice(0, i + 1).join("/") }
+              : { type: "folder", name: part, children: {}, path: parts.slice(0, i + 1).join("/") };
+        } else {
+          // Eğer mevcut node dosya olarak eklenmiş ama aslında klasör olmalıysa (teorik edge)
+          if (isLast && !isSentinel && cur.children[part].type === "folder") {
+            // bırak
+          }
         }
         cur = cur.children[part];
-      });
+      }
+
+      // Eğer sentinel değilse ve son node file olarak eklendiyse tamamdır.
+      // Sentinel ise dosya düğümü eklemedik, sadece klasör zincirini oluşturduk.
+      // (Boş klasör böylece görünür.)
     });
+
   return root;
 }
 
